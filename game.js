@@ -66,8 +66,8 @@ const WEATHER_N = { despejado: '☀ Despejado', lluvia: '🌧 Lluvia', tormenta:
 const DAYLEN = 240;
 const hour = () => ((P.dayT / DAYLEN) * 24 + 6) % 24;
 const clock = () => { const h = hour(); return String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); };
-const HOURS = { shop: [8, 20], smith: [8, 19], bank: [9, 18], stable: [7, 20], recruit: [8, 22], quest: [8, 21], arena: [10, 23] };
-const isOpen = role => { const h = HOURS[role]; if (!h) return true; const x = hour(); return x >= h[0] && x < h[1]; };
+const HOURS = { tavern: [10, 26], market: [8, 22], shop: [8, 20], smith: [8, 19], bank: [9, 18], stable: [7, 20], recruit: [8, 22], quest: [8, 21], arena: [10, 23] };
+const isOpen = role => { const h = HOURS[role]; if (!h) return true; const x = hour(); return h[1] > 24 ? (x >= h[0] || x < h[1] - 24) : (x >= h[0] && x < h[1]); };
 function nightLevel() { const x = hour(); if (x >= 7 && x < 18) return 0; if (x >= 21 || x < 4) return 1; if (x >= 18) return (x - 18) / 3; return (7 - x) / 3; }
 let weather = { type: 'despejado', t: 60, flash: 0 };
 const season = () => SEASONS[Math.floor(((P ? P.day : 1) - 1) / 7) % 4];
@@ -137,6 +137,7 @@ const RECIPES = [
   { id: 'banera', in: { piedra: 8, hierro: 3 } }, { id: 'piano', in: { madera: 15, hierro: 5 } }, { id: 'fuente', in: { piedra: 20, cristal: 3 } },
   { id: 'armero', in: { madera: 4, hierro: 4 } }, { id: 'trofeo', in: { cristal: 8, hierro: 5 } }, { id: 'valla', in: { madera: 1 }, n: 3 },
   { id: 'cultivo', in: { madera: 1, hierba: 1 }, n: 2 },
+  { id: 'runa_blanca', in: { piedra: 2, cristal: 1 }, n: 2, name: 'Runa en blanco' },
   { id: 'cana', in: { madera: 3, hierba: 2 }, name: 'Caña de pescar' },
   { id: 'forja', in: { piedra: 10, hierro: 3 } }, { id: 'cocina', in: { piedra: 6, madera: 4 } }, { id: 'alquimia', in: { madera: 4, hierba: 3, piedra: 2 } },
   { id: 'pescado_asado', in: { pescado: 2 } }, { id: 'sushi', in: { pez_dorado: 1, trigo: 1 } },
@@ -151,7 +152,7 @@ const RECIPES = [
 function recipeStations(r) {
   if (r.id.startsWith('gear:')) return +r.id.split(':')[2] >= 3 ? ['yunque', 'forja'] : ['yunque'];
   if (CONSUM[r.id] && CONSUM[r.id].food) return ['cocina'];
-  if (r.id.startsWith('pocion')) return ['alquimia'];
+  if (r.id.startsWith('pocion') || r.id === 'runa_blanca') return ['alquimia'];
   return [];
 }
 const STN_N = { yunque: 'Yunque', forja: 'Forja', cocina: 'Cocina', alquimia: 'Mesa de alquimia' };
@@ -225,10 +226,10 @@ const BOSSES = ['Minotauro', 'Rey Goblin', 'Gleam Eyes', 'Señor Esqueleto', 'Ud
 
 // ---------- Misiones ----------
 const QUESTS = [
-  { n: 'Primeros pasos', d: 'Recolecta 5 de madera talando árboles (E).', t: 'gather', k: 'madera', c: 5, xp: 30, g: 20 },
-  { n: 'Al calabozo', d: 'Derrota 5 monstruos en el calabozo.', t: 'kill', c: 5, xp: 60, g: 40 },
-  { n: 'Un techo propio', d: 'Coloca 6 bloques en tu parcela (B).', t: 'build', c: 6, xp: 60, g: 50 },
-  { n: 'Más profundo', d: 'Llega al piso 3 del calabozo.', t: 'floor', c: 3, xp: 120, g: 80 },
+  { n: 'Primeros pasos', d: 'Recolecta 5 de madera talando árboles (E).', t: 'gather', k: 'madera', c: 5, xp: 40, g: 20, rw: 'kit' },
+  { n: 'Al calabozo', d: 'Derrota 5 monstruos en el calabozo.', t: 'kill', c: 5, xp: 90, g: 60, rw: 'arma' },
+  { n: 'Un techo propio', d: 'Coloca 6 bloques en tu parcela (B).', t: 'build', c: 6, xp: 90, g: 80, rw: 'cama' },
+  { n: 'Más profundo', d: 'Llega al piso 3 del calabozo.', t: 'floor', c: 3, xp: 180, g: 120, rw: 'armadura' },
   { n: 'Minero novato', d: 'Consigue 5 de hierro.', t: 'gather', k: 'hierro', c: 5, xp: 100, g: 60 },
   { n: 'Guardián del piso 5', d: 'Derrota al jefe del piso 5.', t: 'boss', c: 1, xp: 300, g: 250 },
   { n: 'Hogar acogedor', d: 'Alcanza 15 de confort en tu casa.', t: 'comfort', c: 15, xp: 200, g: 150 },
@@ -249,11 +250,11 @@ function paintPlot(m) { for (let y = PLOT.y; y < PLOT.y + PLOT.h; y++) for (let 
 
 function newPlayer() {
   return {
-    x: 20, y: 15, fx: 20, fy: 15, mt: 0, dir: [0, 1], lvl: 1, xp: 0, gold: 30, hp: 100, mp: 30,
+    x: 20, y: 15, fx: 20, fy: 15, mt: 0, dir: [0, 1], lvl: 1, xp: 0, gold: 100, hp: 100, mp: 30,
     base: { fue: 5, vit: 5, agi: 5, int: 5 }, sp: 0, kp: 0, sk: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 0])),
-    inv: [], mats: Object.fromEntries(Object.keys(MATS).map(k => [k, 0])), cons: { pocion_vida: 3, pocion_mana: 1, pan: 0, estofado: 0, tarta: 0, banquete: 0 }, buffs: {}, cls: 'guerrero', gifts: 0, blocks: {},
+    inv: [], mats: Object.fromEntries(Object.keys(MATS).map(k => [k, 0])), cons: { pocion_vida: 5, pocion_mana: 2, pan: 2, estofado: 0, tarta: 0, banquete: 0 }, buffs: {}, cls: 'guerrero', gifts: 0, blocks: {},
     eq: { arma: null, armadura: null, casco: null, anillo: null }, cds: {}, atkCd: 0, maxFloor: 1, floor: 0,
-    q: 0, qp: 0, house: 1, binds: ['exura', 'exori', 'utani hur', 'exevo gran mas vis'], tokens: 0, arenaBest: 0, petLv: {}, allyQ: {}, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 20, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
+    q: 0, qp: 0, house: 1, binds: ['exura', 'exori', 'utani hur', 'exevo gran mas vis'], runes: { blank: 0, gfb: 0, sd: 0, uh: 0 }, market: [], marketGold: 0, mktStock: [], mktDay: 0, tourneyWeek: -1, tokens: 0, arenaBest: 0, petLv: {}, allyQ: {}, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 20, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
   };
 }
 function stat(k) { let v = P.base[k] || 0; for (const s in P.eq) if (P.eq[s]) v += P.eq[s].st[k] || 0; return v; }
@@ -264,7 +265,7 @@ function def() { return Math.round((stat('def') + Math.floor(stat('vit') / 2) + 
 function crit() { return 5 + stat('agi') * .6 + stat('crit') + (P.cls === 'arquero' ? 8 : 0); }
 function moveTime() { return Math.max(.07, (.22 - stat('agi') * .003) * (P.riding && P.mount ? MOUNTS[P.mount].spd : 1) * (P.buffs && P.buffs.prisa > 0 ? .7 : 1)); }
 function atkTime() { return Math.max(.35, 1 - stat('agi') * .015); }
-function xpNeed(l) { return Math.round(50 * Math.pow(l, 1.6)); }
+function xpNeed(l) { return Math.round(35 * Math.pow(l, 1.5)); }
 
 function log(t, c = '#ddd') { const l = msgs[msgs.length - 1]; if (l && l.t === t) { l.a = 8; return; } msgs.push({ t, c, a: 8 }); if (msgs.length > 7) msgs.shift(); }
 
@@ -301,11 +302,20 @@ function genTown() {
     { x: 27, y: 20, n: 'Ryu (Establo)', col: '#3a8', role: 'stable' },
     { x: 16, y: 5, n: 'Bárbara (Reclutas)', col: '#c4c', role: 'recruit' },
     { x: 34, y: 17, n: 'Coliseo (Arena)', col: '#c33', role: 'arena' },
+    { x: 23, y: 20, n: 'Mia (Taberna)', col: '#c85', role: 'tavern' },
+    { x: 12, y: 13, n: 'Casa de Subastas', col: '#a8f', role: 'market' },
   ];
   const bld = (x0, y0, w, h, col) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) st(m, x, y, T.WALL); m.roofs.push([x0, y0, w, h, col]); };
   m.roofs = [];
   for (let y = 3; y < 15; y++) for (let x = 8; x < 16; x++) if (gt(m, x, y) !== T.PATH) st(m, x, y, T.GRASS);
   bld(9, 3, 3, 2, '#2a6'); bld(13, 3, 3, 2, '#865'); bld(9, 9, 5, 2, '#ddd'); bld(26, 18, 4, 2, '#a63'); bld(32, 18, 5, 3, '#a33'); st(m, 34, 16, T.PATH);
+  bld(21, 18, 5, 2, '#952'); bld(22, 23, 3, 2, '#68a'); bld(26, 23, 3, 2, '#8a6'); bld(10, 14, 0, 0, '#000');
+  for (let x = 21; x < 30; x++) st(m, x, 21, T.PATH); for (let y = 21; y < 26; y++) { st(m, 25, y, T.PATH); }
+  m.roofs = m.roofs.filter(r => r[2] > 0);
+  // horarios de NPCs: trabajo → taberna → casa
+  const homes = [[23, 25], [27, 25], [11, 8], [14, 8]], seats = [[21, 20], [22, 20], [24, 20], [25, 20], [21, 22], [22, 22], [24, 22]];
+  let hi = 0, si = 0;
+  for (const n of m.npcs) { n.wx = n.x; n.wy = n.y; if (['quest', 'shop', 'smith', 'god', 'bank', 'stable', 'recruit'].includes(n.role)) { n.sched = 1; n.home = homes[hi++ % homes.length]; n.seat = seats[si++ % seats.length]; } }
   for (let x = 9; x < 17; x++) st(m, x, 6, T.PATH); for (let y = 6; y < 15; y++) st(m, 15, y, T.PATH); for (let x = 11; x < 15; x++) st(m, x, 12, T.PATH);
   for (let y = 16; y < 21; y++) st(m, 28, y, T.PATH);
   m.light = 1; return m;
@@ -357,7 +367,7 @@ function genFloor(f) {
 }
 function spawnEnemy(b, x, y, f, boss) {
   const sc = 1 + (f - 1) * .28;
-  ents.push({ ...b, x, y, fx: x, fy: y, mt: 0, mhp: Math.round(b.hp * sc * (boss ? 1 + f * .1 : 1)), hp: 0, atk: Math.round(b.atk * sc), def: Math.floor(f * .8), lvl: f, boss, cd: rnd(0, 1), mcd: rnd(0, 1), flash: 0, aggro: false, xp: Math.round((b.hp / 3 + f * 3) * (boss ? 8 : 1)) });
+  ents.push({ ...b, x, y, fx: x, fy: y, mt: 0, mhp: Math.round(b.hp * sc * (boss ? 1 + f * .1 : 1)), hp: 0, atk: Math.round(b.atk * sc), def: Math.floor(f * .8), lvl: f, boss, cd: rnd(0, 1), mcd: rnd(0, 1), flash: 0, aggro: false, xp: Math.round((b.hp / 3 + f * 4) * 1.35 * (boss ? 8 : 1)) });
   const e = ents[ents.length - 1];
   if (!boss && Math.random() < .04) { e.rare = 1; e.n = '★ ' + e.n + ' dorado'; e.mhp *= 3; e.atk = Math.round(e.atk * 1.5); e.xp *= 5; e.col = '#ec4'; }
   e.hp = e.mhp; e.pt = 3; return e;
@@ -411,7 +421,7 @@ function bossAI(e, dt) {
 function solidAt(x, y, ignoreEnt) {
   const t = gt(W, x, y); if (SOLID.has(t)) return true;
   const o = W.obj[x + ',' + y]; if (o && BLOCKS[o].solid) return true;
-  if (W.npcs && W.npcs.some(n => n.x === x && n.y === y)) return true;
+  if (W.npcs && W.npcs.some(n => n.x === x && n.y === y && !n.hidden)) return true;
   if (W === town && visitors.some(v => v.x === x && v.y === y)) return true;
   if (!ignoreEnt && ents.some(e => e.x === x && e.y === y)) return true;
   if (P && P.x === x && P.y === y && !ignoreEnt) return true;
@@ -459,6 +469,46 @@ function updateField(dt) {
   if (W !== field) return;
   field.spawnT -= dt; if (field.spawnT <= 0) { field.spawnT = 8; if (ents.length < FIELD_MAX) spawnFieldMob(); }
 }
+// ---------- Horarios de NPCs ----------
+function npcGoal(n) {
+  const x = hour();
+  if (x >= 22 || x < 7) return 'home';
+  if (isOpen(n.role) && x >= 7) return 'work';
+  return 'tavern';
+}
+function updateNPCs(dt) {
+  if (!town) return;
+  for (const n of town.npcs) {
+    if (!n.sched) continue;
+    const g = npcGoal(n), tgt = g === 'work' ? [n.wx, n.wy] : g === 'home' ? n.home : n.seat;
+    n.state = g;
+    if (W !== town) { n.x = tgt[0]; n.y = tgt[1]; n.hidden = g === 'home'; continue; }
+    n.mcd = (n.mcd || 0) - dt; if (n.mcd > 0) continue; n.mcd = .45;
+    if (n.x === tgt[0] && n.y === tgt[1]) { n.hidden = g === 'home'; continue; }
+    n.hidden = false;
+    const step = astar({ x: n.x, y: n.y }, tgt[0], tgt[1], 900);
+    if (Math.abs(n.x - tgt[0]) + Math.abs(n.y - tgt[1]) === 1) { if (!(P.x === tgt[0] && P.y === tgt[1])) { n.x = tgt[0]; n.y = tgt[1]; } continue; }
+    if (step) { const nx = n.x + step[0], ny = n.y + step[1]; if (!(P.x === nx && P.y === ny) && !town.npcs.some(o => o !== n && o.x === nx && o.y === ny)) { n.x = nx; n.y = ny; } }
+    else { n.x = tgt[0]; n.y = tgt[1]; }
+  }
+}
+function settleNPCs() { if (!town) return; for (const n of town.npcs) if (n.sched) { const g = npcGoal(n), t = g === 'work' ? [n.wx, n.wy] : g === 'home' ? n.home : n.seat; n.x = t[0]; n.y = t[1]; n.hidden = g === 'home'; n.state = g; } }
+
+// ---------- Casa de subastas ----------
+function marketChance(it, price) { const r = price / it.value; return Math.max(.01, Math.min(.6, .35 * (2.6 - r) / 1.6)); }
+function marketTick() {
+  let sold = 0;
+  P.market = (P.market || []).filter(l => { if (Math.random() < marketChance(l.item, l.price)) { P.marketGold = (P.marketGold || 0) + l.price; sold++; log('💰 ' + pick(['Un aventurero de Loki', 'Un mercader de Rakia', 'La Familia Soma', 'Un enano herrero', 'Un noble elfo']) + ' compró tu ' + l.item.name + ' por ' + l.price + ' oro.', '#fd4'); return false; } return true; });
+  if (sold) snd('pick'); return sold;
+}
+let mktT = 0;
+function updateMarket(dt) { mktT += dt; if (mktT >= DAYLEN / 24) { mktT = 0; marketTick(); } if (P.mktDay !== P.day) { P.mktDay = P.day; P.mktStock = [0, 1, 2, 3].map(() => { const it = genItem(null, Math.max(P.lvl, P.maxFloor), ri(1, 3)); it.price = Math.round(it.value * rnd(1.8, 2.8)); return it; }); } }
+function listItem(uid, price) {
+  const it = P.inv.find(i => i.uid === uid); if (!it) return false; price = Math.max(1, Math.round(price || it.value * 2)); const fee = Math.ceil(price * .05);
+  if (P.gold < fee || (P.market || []).length >= 8) return false;
+  P.gold -= fee; P.inv = P.inv.filter(i => i !== it); P.market = P.market || []; P.market.push({ item: it, price, day: P.day }); log('📜 Pusiste en subasta ' + it.name + ' por ' + price + ' oro (comisión ' + fee + ').', '#a8f'); return true;
+}
+
 // ---------- Arena ----------
 let arena = null;
 function genArena() {
@@ -467,9 +517,12 @@ function genArena() {
   for (const [x, y] of [[4, 4], [12, 4], [4, 10], [12, 10]]) st(m, x, y, T.ROCK);
   st(m, 8, 14, T.EXIT); m.torches = new Set(['3,0', '8,0', '13,0']); return m;
 }
-function startArena() {
+const week = () => Math.floor((P.day - 1) / 7), tourneyDay = () => P.day % 7 === 0;
+function rivals() { const w = week(); return ['Bete Loga', 'Aiz Wallenstein', 'Ottar', 'Lefiya', 'Kirito', 'Ranta'].map((n, i) => ({ n, s: 4 + Math.floor(hash(w, i * 13) * 8) })).sort((a, b) => b.s - a.s).slice(0, 4); }
+function startArena(tourney) {
   if (!isOpen('arena')) return false;
-  arena = { wave: 0, active: false, wait: 3, gold: 0, tokens: 0, champs: 0 };
+  if (tourney && (!tourneyDay() || P.tourneyWeek === week())) return false;
+  arena = { wave: 0, active: false, wait: 3, gold: 0, tokens: 0, champs: 0, tourney: !!tourney }; if (tourney) { P.tourneyWeek = week(); log('🏆 ¡TORNEO SEMANAL! Supera tantas oleadas como puedas (máx. 12).', '#fd4'); }
   W = genArena(); ents = []; drops = []; projs = []; warns = []; P.floor = 0; P.field = 0; fishing = null; closePanel();
   P.x = 8; P.y = 12; P.fx = 8; P.fy = 12; P.mt = 0; buildComps(); log('⚔ ¡Bienvenido al Coliseo! Sobrevive a las oleadas. Sal por la puerta sur para cobrar.', '#fc6'); snd('boss'); return true;
 }
@@ -488,10 +541,17 @@ function waveReward() {
 }
 function updateArena(dt) {
   if (!arena || !W.isArena) return;
-  if (arena.active) { if (!ents.length) { arena.active = false; waveReward(); arena.wait = 4; } return; }
+  if (arena.active) { if (!ents.length) { arena.active = false; waveReward(); arena.wait = 4; if (arena.tourney && arena.wave >= 12) { finishTourney(); endArena(); } } return; }
   arena.wait -= dt; if (arena.wait <= 0) nextWave();
 }
-function endArena() { const a = arena; arena = null; if (a) log('🏟 Sales del Coliseo. Récord: oleada ' + (P.arenaBest || 0) + '. Ganaste ' + a.gold + ' oro y ' + a.tokens + ' fichas.', '#fc6'); enterTown([34, 16]); }
+function finishTourney() {
+  if (!arena || !arena.tourney || arena.done) return null; arena.done = 1;
+  const score = arena.active ? arena.wave - 1 : arena.wave, table = [...rivals(), { n: 'Tú', s: score, me: 1 }].sort((a, b) => b.s - a.s || (a.me ? -1 : 1)), pos = table.findIndex(r => r.me) + 1;
+  const prize = [100, 50, 25][pos - 1] || 5; P.tokens = (P.tokens || 0) + prize; P.tourneyBest = Math.min(P.tourneyBest || 99, pos);
+  if (pos === 1) { P.tourneyWins = (P.tourneyWins || 0) + 1; log('🥇 ¡CAMPEÓN DEL TORNEO SEMANAL! +' + prize + ' fichas.', '#fd4'); snd('lvl'); } else log('🏅 Torneo: quedaste en el puesto ' + pos + ' con ' + score + ' oleadas. +' + prize + ' fichas.', '#fc6');
+  P.lastTourney = { week: week(), pos, score, table: table.map(r => r.n + ': ' + r.s) }; return pos;
+}
+function endArena() { if (arena && arena.tourney) finishTourney(); const a = arena; arena = null; if (a) log('🏟 Sales del Coliseo. Récord: oleada ' + (P.arenaBest || 0) + '. Ganaste ' + a.gold + ' oro y ' + a.tokens + ' fichas.', '#fc6'); enterTown([34, 16]); }
 function checkExit() {
   if (W.isArena && gt(W, P.x, P.y) === T.EXIT) { endArena(); P.mt = 0; return; }
   if (gt(W, P.x, P.y) !== T.EXIT) return;
@@ -527,6 +587,8 @@ function onKey(k) {
   if (k === 'escape') { if (fishing) { fishing = null; return; } if (panel) closePanel(); else if (buildMode) { buildMode = false; } return; }
   if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'n') return toggleMount();
   if (k === 'enter') { openChat(); return; }
+  if (k === 'r') { useRune('gfb'); return; } if (k === 't') { useRune('sd'); return; } if (k === 'y') { useRune('uh'); return; }
+  if (k === 'p') { petAbility(); return; }
   if (/^f[1-4]$/.test(k)) { castSpell(P.binds[+k[1] - 1]); return; } if (k === 'm') return toggleMusic();
   if (panel) return;
   if (fishing) { if (k === 'e' || k === 'escape') { fishing = null; log('Recoges la caña.', '#aaa'); } return; }
@@ -579,7 +641,7 @@ function facing() { return [P.x + P.dir[0], P.y + P.dir[1]]; }
 function interact() {
   const [fx, fy] = facing(), t = gt(W, fx, fy), here = gt(W, P.x, P.y);
   const vis = W === town && visitors.find(v => v.x === fx && v.y === fy); if (vis) return talkVisitor(vis);
-  const npc = W.npcs && W.npcs.find(n => n.x === fx && n.y === fy);
+  const npc = W.npcs && W.npcs.find(n => n.x === fx && n.y === fy && !n.hidden);
   if (npc) return talk(npc);
   const o = W.obj[fx + ',' + fy];
   if (o === 'cultivo' && W === town) return farm(fx, fy);
@@ -614,6 +676,7 @@ const FRIENDS = {
 };
 const hearts = id => Math.min(10, Math.floor((P.friend[id] || 0) / 10));
 const ACH = [
+  { id: 'torneo', n: 'Campeón del Coliseo', d: 'Gana un torneo semanal', c: () => (P.tourneyWins || 0) >= 1, g: 500 },
   { id: 'k10', n: 'Primera sangre', d: 'Derrota 10 monstruos', c: () => P.kills >= 10, g: 50 },
   { id: 'k100', n: 'Cazador', d: 'Derrota 100 monstruos', c: () => P.kills >= 100, g: 300 },
   { id: 'k500', n: 'Exterminador', d: 'Derrota 500 monstruos', c: () => P.kills >= 500, g: 1500 },
@@ -654,10 +717,11 @@ function toggleMount() {
 }
 function talk(n) {
   if (n.id && !talk.direct) { openPanel('npc', n); return; }
+  if (n.sched && n.state === 'tavern' && n.role !== 'tavern') { log(n.n + ': «¡Estoy descansando en la taberna! ' + pick(['¿Te invito una ronda?', 'Mañana hablamos de negocios.', 'Dicen que en el piso 10 hay un mercader con armas legendarias…']) + '»', '#fc8'); return 'offduty'; }
   if (!isOpen(n.role)) { const h = HOURS[n.role]; log(n.n + ': «Está cerrado. Abrimos de ' + h[0] + ':00 a ' + h[1] + ':00.» (son las ' + clock() + ')', '#aaa'); return 'closed'; }
   snd('ui');
   if (n.role === 'dmerch') return openPanel('dmerch');
-  if (['bank', 'depot', 'temple', 'stable', 'recruit', 'arena'].includes(n.role)) return openPanel(n.role);
+  if (['bank', 'depot', 'temple', 'stable', 'recruit', 'arena', 'tavern', 'market'].includes(n.role)) return openPanel(n.role);
   if (n.role === 'quest') return openPanel('quests');
   if (n.role === 'shop') return openPanel('shop');
   if (n.role === 'smith') return openPanel('craft');
@@ -761,9 +825,9 @@ function damageEnemy(e, dmg, color) {
 function killEnemy(e) {
   ents = ents.filter(x => x !== e); snd('die'); burst(e.fx * TS + 16, e.fy * TS + 16, e.col, 25); shake = e.boss ? 20 : 4;
   gainXp(e.xp); P.kills++; questEvent('kill', null, 1); petGainXp(e.xp * .35); allyQuestEvent('kill', null, 1); allyQuestEvent('killName', e.n.replace(/^★ | dorado$/g, ''), 1, e.rare ? 'rare' : null); if (e.boss) allyQuestEvent('boss', null, 1); if (e.champion && arena) arena.champs = (arena.champs || 0) + 1;
-  const g = Math.round((ri(1, 4) + e.lvl * 2) * (1 + P.sk.fortuna * .15 + (P.pet === 'gato' ? (petData('gato').lvl >= 10 ? .5 : .25) : 0)) * (e.boss ? 10 : 1));
+  const g = Math.round((ri(2, 5) + e.lvl * 3) * (1 + P.sk.fortuna * .15 + (P.pet === 'gato' ? (petData('gato').lvl >= 10 ? .5 : .25) : 0)) * (e.boss ? 10 : 1));
   drops.push({ x: e.x, y: e.y, gold: g });
-  if (e.boss || e.rare || Math.random() < .18) drops.push({ x: e.x, y: e.y, item: genItem(null, e.lvl, e.boss ? ri(2, 4) : e.rare ? ri(3, 4) : null) });
+  if (e.boss || e.rare || Math.random() < (e.lvl <= 3 ? .26 : .2)) drops.push({ x: e.x, y: e.y, item: genItem(null, e.lvl, e.boss ? ri(2, 4) : e.rare ? ri(3, 4) : null) });
   if (e.rare) { P.rares++; log('¡Derrotaste a un monstruo raro: ' + e.n + '!', '#fd4'); for (let i = 0; i < 3; i++) drops.push({ x: e.x, y: e.y, gold: g }); }
   if (e.boss) P.bosses++;
   if (Math.random() < .12) drops.push({ x: e.x, y: e.y, cons: Math.random() < .7 ? 'pocion_vida' : 'pocion_mana' });
@@ -827,6 +891,13 @@ function gainXp(n) {
     log('¡Subiste a nivel ' + P.lvl + '! +3 puntos de estado, +1 punto de habilidad.', '#fd4');
   }
 }
+function questReward(rw) {
+  if (!rw) return;
+  if (rw === 'kit') { P.blocks.muro_madera = (P.blocks.muro_madera || 0) + 6; P.blocks.suelo_madera = (P.blocks.suelo_madera || 0) + 4; P.mats.semilla_trigo += 3; log('🎁 Eina te da un kit de construcción (6 muros, 4 suelos) y semillas.', '#fd4'); }
+  if (rw === 'arma') { const C = CLASSES[P.cls] || CLASSES.guerrero, it = genItem('arma', Math.max(2, P.lvl), 1, C.w); P.inv.push(it); log('🎁 Recompensa: ' + it.name + ' [Poco común]', '#5e5'); }
+  if (rw === 'cama') { P.blocks.cama = (P.blocks.cama || 0) + 1; P.blocks.antorcha = (P.blocks.antorcha || 0) + 2; log('🎁 Recompensa: una cama y 2 antorchas para tu casa.', '#fd4'); }
+  if (rw === 'armadura') { const it = genItem('armadura', Math.max(3, P.lvl), 2); P.inv.push(it); log('🎁 Recompensa: ' + it.name + ' [Raro]', '#5af'); }
+}
 function questEvent(type, key, n) {
   const q = QUESTS[P.q]; if (!q || q.t !== type) return; if (q.k && q.k !== key) return;
   if (type === 'floor' || type === 'comfort') P.qp = Math.max(P.qp, n); else P.qp += n;
@@ -841,7 +912,8 @@ function hurtPlayer(d, src) {
   if (P.hp <= 0) die(src);
 }
 function die(src) {
-  P.deaths++; const lost = (P.blessed || (W && W.isArena)) ? 0 : Math.floor(P.gold * .1); P.gold -= lost; if (P.blessed) { P.blessed = 0; log('✨ La bendición del templo te protegió: no pierdes oro.', '#ff9'); }
+  P.deaths++; if (arena && arena.tourney) finishTourney();
+  const lost = (P.blessed || (W && W.isArena)) ? 0 : Math.floor(P.gold * .1); P.gold -= lost; if (P.blessed) { P.blessed = 0; log('✨ La bendición del templo te protegió: no pierdes oro.', '#ff9'); }
   log('Has caído ante ' + src + '. Pierdes ' + lost + ' de oro.', '#f44');
   P.hp = maxHp(); P.mp = maxMp(); enterTown([20, 7]); openPanel('death', { src, lost });
 }
@@ -906,6 +978,22 @@ function petGainXp(n) {
   while (d.xp >= petNeed(d.lvl) && d.lvl < 30) { d.xp -= petNeed(d.lvl); d.lvl++; log('🐾 ' + PETS[P.pet].n + ' sube a nivel ' + d.lvl + '.', '#9cf');
     if (d.lvl === 10) { log('✨ ¡' + PETS[P.pet].n + ' evolucionó a ' + EVO[P.pet].n + '!', '#fd4'); snd('lvl'); const c = comps.find(c => c.kind === 'pet'); if (c) { ring(c.fx * TS + 16, c.fy * TS + 16, '#fd4'); burst(c.fx * TS + 16, c.fy * TS + 16, '#fd4', 40); } } }
 }
+const PETAB = { perro: { n: 'Mordisco feroz', cd: 15 }, gato: { n: 'Robo felino', cd: 20 }, halcon: { n: 'Picada', cd: 12 }, slime: { n: 'Curación gelatinosa', cd: 25 } };
+function petAbility() {
+  if (!P.pet) { log('No tienes mascota activa.', '#f88'); return 'nopet'; }
+  if ((P.cds.pet || 0) > 0) { log(PETAB[P.pet].n + ' se recarga (' + Math.ceil(P.cds.pet) + 's).', '#aaa'); return 'cd'; }
+  const c = comps.find(c => c.kind === 'pet'); if (!c) return 'nopet';
+  const evo = petData().lvl >= 10, pm = petMult(P.pet), range = P.pet === 'halcon' ? 6 : 2;
+  const t = (P.target && ents.includes(P.target) && Math.max(Math.abs(P.target.x - c.x), Math.abs(P.target.y - c.y)) <= range) ? P.target : ents.filter(e => Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= range).sort((a, b) => b.hp - a.hp)[0];
+  if (P.pet === 'slime') { const h = Math.round(maxHp() * (evo ? .45 : .3)); P.hp = Math.min(maxHp(), P.hp + h); P.party.forEach(a => { if (!a.down) a.hp = allyMaxHp(a.id); }); addText(P.fx * TS + 16, P.fy * TS, '+' + h, '#5f5', 18); ring(c.fx * TS + 16, c.fy * TS + 16, '#5d8'); }
+  else { if (!t) { log('No hay enemigos cerca de tu mascota.', '#aaa'); return 'notarget'; }
+    c.x = c.x; const base = compDmg(c);
+    if (P.pet === 'perro') { damageEnemy(t, base * (evo ? 6 : 4), '#fa5'); if (ents.includes(t)) { t.cd = Math.max(t.cd, 2.5); t.mcd = Math.max(t.mcd, 2.5); addText(t.fx * TS + 16, t.fy * TS - 10, '¡Aturdido!', '#ff8'); } }
+    if (P.pet === 'halcon') { for (let i = 0; i < (evo ? 5 : 3); i++) if (ents.includes(t)) damageEnemy(t, base * 1.3, '#cb9'); }
+    if (P.pet === 'gato') { const g = Math.round((10 + t.lvl * 6) * (evo ? 2 : 1)); drops.push({ x: P.x, y: P.y, gold: g }); if (Math.random() < (evo ? .5 : .25)) drops.push({ x: P.x, y: P.y, item: genItem(null, t.lvl, ri(1, 3)) }); pickup(); damageEnemy(t, base, '#fa5'); }
+  }
+  P.cds.pet = PETAB[P.pet].cd; texts.push({ x: c.fx * TS + 16, y: c.fy * TS - 16, t: PETAB[P.pet].n + '!', col: '#9cf', sz: 13, l: 1.2 }); snd('lvl'); return 'used';
+}
 const petMult = id => (1 + (petData(id).lvl - 1) * .12) * (petData(id).lvl >= 10 ? 1.5 : 1);
 // misiones personales de aliados
 const AQUEST = {
@@ -928,7 +1016,7 @@ function allyQuestEvent(type, name, n, extra) {
 let comps = [];
 function allyMaxHp(id) { return Math.round((60 + P.lvl * 14) * ALLIES[id].hp * allyMult(id)); }
 function buildComps() {
-  comps = [];
+  comps = []; texts = []; parts = [];
   if (P.pet) comps.push({ kind: 'pet', id: P.pet, x: P.x, y: P.y, fx: P.x, fy: P.y, mt: 0, cd: 1 });
   for (const a of P.party) comps.push({ kind: 'ally', id: a.id, a, x: P.x, y: P.y, fx: P.x, fy: P.y, mt: 0, cd: 1 });
   placeComps();
@@ -1005,6 +1093,9 @@ const SPELLS = {
   'utamo vita': { n: 'Escudo mágico', lvl: 12, mp: 50, f: () => { P.buffs.escudo = 60; } },
   'utevo lux': { n: 'Luz', lvl: 1, mp: 15, f: () => { P.buffs.luz = 120; } },
   'exevo pan': { n: 'Crear comida', lvl: 4, mp: 40, f: () => { P.cons.pan++; } },
+  'adori gran': { n: 'Runa: Gran bola de fuego', lvl: 8, mp: 60, rune: 'gfb' },
+  'adori vita vis': { n: 'Runa: Muerte súbita', lvl: 15, mp: 120, rune: 'sd' },
+  'adura vita': { n: 'Runa: Curación definitiva', lvl: 10, mp: 80, rune: 'uh' },
 };
 function spellHeal(h) { h = Math.round(h); P.hp = Math.min(maxHp(), P.hp + h); addText(P.fx * TS + 16, P.fy * TS + 4, '+' + h, '#5f5', 17); ring(P.fx * TS + 16, P.fy * TS + 16, '#5f5'); snd('heal'); }
 function spellArea(r, dmg, col, sky) {
@@ -1028,9 +1119,27 @@ function castSpell(txt) {
   if (P.lvl < S.lvl) { log('Necesitas nivel ' + S.lvl + ' para «' + w + '».', '#f88'); return 'lvl'; }
   if ((P.cds.spell || 0) > 0) return 'cd';
   if (P.mp < S.mp) { log('Maná insuficiente para «' + w + '» (' + S.mp + ').', '#88f'); return 'mp'; }
+  if (S.rune && !(P.runes.blank > 0)) { log('Necesitas una runa en blanco (fabrícala en la Mesa de alquimia).', '#f88'); return 'blank'; }
   P.mp -= S.mp; P.cds.spell = 1;
+  if (S.rune) { P.runes.blank--; P.runes[S.rune] = (P.runes[S.rune] || 0) + 1; texts.push({ x: P.fx * TS + 16, y: P.fy * TS - 14, t: w, col: '#fe7', sz: 14, l: 1.6 }); log('✨ Creaste una runa: ' + RUNES[S.rune].n + ' (' + RUNES[S.rune].key + ' para usar).', '#c9f'); snd('heal'); return 'rune'; }
   texts.push({ x: P.fx * TS + 16, y: P.fy * TS - 14, t: w, col: '#fe7', sz: 14, l: 1.6 });
   S.f(); return 'cast';
+}
+const RUNES = {
+  gfb: { n: 'Gran bola de fuego', key: 'R', w: 'adori gran' },
+  sd: { n: 'Muerte súbita', key: 'T', w: 'adori vita vis' },
+  uh: { n: 'Curación definitiva', key: 'Y', w: 'adura vita' },
+};
+function runeTarget(r = 7) { const ok = e => ents.includes(e) && Math.max(Math.abs(e.x - P.x), Math.abs(e.y - P.y)) <= r && los(P.x, P.y, e.x, e.y); if (P.target && ok(P.target)) return P.target; return ents.filter(ok).sort((a, b) => Math.abs(a.x - P.x) + Math.abs(a.y - P.y) - Math.abs(b.x - P.x) - Math.abs(b.y - P.y))[0]; }
+function useRune(id) {
+  if (!(P.runes[id] > 0)) { log('No tienes runas de ' + RUNES[id].n + '.', '#f88'); return 'none'; }
+  if ((P.cds.rune || 0) > 0) return 'cd';
+  if (id === 'uh') { P.runes.uh--; P.cds.rune = 1; spellHeal(150 + stat('int') * 8 + P.lvl * 4); texts.push({ x: P.fx * TS + 16, y: P.fy * TS - 14, t: RUNES[id].w, col: '#fe7', sz: 13, l: 1.4 }); return 'used'; }
+  const t = runeTarget(); if (!t) { log('No hay objetivo a la vista.', '#aaa'); return 'notarget'; }
+  P.runes[id]--; P.cds.rune = 1; texts.push({ x: P.fx * TS + 16, y: P.fy * TS - 14, t: RUNES[id].w, col: '#fe7', sz: 13, l: 1.4 });
+  if (id === 'gfb') { const tx = t.x, ty = t.y; ents.filter(e => Math.max(Math.abs(e.x - tx), Math.abs(e.y - ty)) <= 1).forEach(e => damageEnemy(e, 30 + stat('int') * 4 + P.lvl * 2, '#f93')); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) burst((tx + dx) * TS + 16, (ty + dy) * TS + 16, '#f60', 8); snd('fire'); shake = 8; }
+  if (id === 'sd') { damageEnemy(t, 60 + stat('int') * 8 + P.lvl * 3, '#c4f'); for (let i = 0; i < 20; i++) parts.push({ x: t.fx * TS + 16, y: t.fy * TS + 16, vx: rnd(-80, 80), vy: rnd(-80, 80), l: .6, col: pick(['#000', '#a4f', '#fff']), sz: 3 }); snd('die'); shake = 6; }
+  return 'used';
 }
 function openChat() { const c = document.getElementById('chat'); c.style.display = 'block'; c.value = ''; c.focus(); }
 
@@ -1113,7 +1222,7 @@ function update(dt) {
   for (const b in P.buffs) { P.buffs[b] -= dt; if (P.buffs[b] <= 0) { delete P.buffs[b]; log('El efecto ' + BUFFN[b] + ' terminó.', '#aaa'); } }
   if (P.buffs.vigor > 0) P.hp = Math.min(maxHp(), P.hp + dt * (1 + stat('vit') * .2) * 2);
   updateComps(dt);
-  updateArena(dt);
+  updateArena(dt); updateNPCs(dt); updateMarket(dt);
   growCrops(dt); updateVisitors(dt); updateSeason(dt); updateField(dt);
   P.achT = (P.achT || 0) - dt; if (P.achT <= 0) { P.achT = 1; checkAch(); }
   // regeneración de recursos en ciudad
@@ -1265,7 +1374,7 @@ function render() {
   if (W === town) { cx.strokeStyle = '#fc6a'; cx.setLineDash([4, 4]); cx.strokeRect(PLOT.x * TS - camX, PLOT.y * TS - camY, PLOT.w * TS, PLOT.h * TS); cx.setLineDash([]); cx.fillStyle = '#fc6'; cx.font = '11px sans-serif'; cx.textAlign = 'left'; cx.fillText(HOUSE[P.house || 1].n + ' (nv ' + (P.house || 1) + ') — Confort ' + comfort() + '  [H: mejorar]', PLOT.x * TS - camX + 2, PLOT.y * TS - camY - 4); }
   for (const d of drops) { const sx = d.x * TS - camX, sy = d.y * TS - camY + Math.sin(time * 4 + d.x) * 2; if (d.gold) { cx.fillStyle = '#fd4'; cx.beginPath(); cx.arc(sx + 12, sy + 20, 4, 0, 7); cx.arc(sx + 19, sy + 22, 4, 0, 7); cx.fill(); } else if (d.item) { cx.fillStyle = ['#ccc', '#5e5', '#5af', '#c7f', '#fb3'][d.item.rar]; cx.globalAlpha = .4 + Math.sin(time * 5) * .2; cx.fillRect(sx + 6, sy + 6, 20, 20); cx.globalAlpha = 1; cx.font = '16px sans-serif'; cx.textAlign = 'center'; cx.fillText(SLOTS[d.item.slot], sx + 16, sy + 22); } else { cx.font = '14px sans-serif'; cx.textAlign = 'center'; cx.fillText(d.cons ? CONSUM[d.cons].ico : MATS[d.mat], sx + 16, sy + 22); } }
   // entidades ordenadas por y
-  const list = [...(W === town ? visitors : []).map(v => ({ v, y: v.fy })), ...(W.npcs || []).map(n => ({ n, y: n.y })), ...ents.map(e => ({ e, y: e.fy })), ...comps.map(c => ({ c, y: c.fy - .01 })), { p: 1, y: P.fy }].sort((a, b) => a.y - b.y);
+  const list = [...(W === town ? visitors : []).map(v => ({ v, y: v.fy })), ...(W.npcs || []).filter(n => !n.hidden).map(n => ({ n, y: n.y })), ...ents.map(e => ({ e, y: e.fy })), ...comps.map(c => ({ c, y: c.fy - .01 })), { p: 1, y: P.fy }].sort((a, b) => a.y - b.y);
   for (const o of list) {
     if (o.n) { const sx = o.n.x * TS - camX, sy = o.n.y * TS - camY; if (!isOpen(o.n.role)) { cx.fillStyle = '#ccf'; cx.font = 'bold 11px sans-serif'; cx.textAlign = 'center'; cx.fillText('Zzz', sx + 26, sy - 14 + Math.sin(time * 2) * 3); } drawChar(sx, sy, o.n.col, [0, 1], { hair: o.n.role === 'god' ? '#111' : '#a63', legs: '#335' }); cx.fillStyle = '#fff'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(o.n.n, sx + 16, sy - 4); if (o.n.role === 'quest' && QUESTS[P.q] && P.qp >= QUESTS[P.q].c) { cx.fillStyle = '#fd4'; cx.font = 'bold 18px sans-serif'; cx.fillText('!', sx + 16, sy - 14 + Math.sin(time * 5) * 2); } }
     else if (o.v) { const v = o.v, sx = v.fx * TS - camX, sy = v.fy * TS - camY; drawChar(sx, sy, v.col, [0, 1], { hair: v.hair, moving: v.mt > 0 }); cx.fillStyle = '#9cf'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(v.n + (v.gift ? ' 🎁' : ''), sx + 16, sy - 4);
@@ -1335,7 +1444,7 @@ function hud() {
   $('hp').style.width = (100 * P.hp / mh) + '%'; $('hpt').textContent = `PV ${Math.ceil(P.hp)}/${mh}`;
   $('mp').style.width = (100 * P.mp / mp) + '%'; $('mpt').textContent = `MP ${Math.floor(P.mp)}/${mp}`;
   $('xp').style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
-  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + (P.party.length ? '<br>👥 ' + P.party.map(x => `${ALLIES[x.id].n} ${x.down ? '💀' : Math.ceil(x.hp) + '/' + allyMaxHp(x.id)}`).join(' · ') : '') + (P.pet ? ' 🐾 ' + PETS[P.pet].n : '') + (P.riding ? ' 🐴' : '') + (P.bank ? ' · 🏦 ' + P.bank : '') + (arena ? `<br><b style="color:#f84">🏟 Oleada ${arena.wave} ${arena.active ? '— enemigos: ' + ents.length : '— siguiente en ' + Math.ceil(arena.wait) + 's'}</b>` : '') + (P.pet ? ' 🐾 ' + petName(P.pet) : '') + `<br>🕐 ${clock()} ${nightLevel() > .5 ? '🌙' : ''} · ${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
+  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + (P.party.length ? '<br>👥 ' + P.party.map(x => `${ALLIES[x.id].n} ${x.down ? '💀' : Math.ceil(x.hp) + '/' + allyMaxHp(x.id)}`).join(' · ') : '') + (P.pet ? ' 🐾 ' + PETS[P.pet].n : '') + (P.riding ? ' 🐴' : '') + (P.bank ? ' · 🏦 ' + P.bank : '') + (arena ? `<br><b style="color:#f84">🏟 Oleada ${arena.wave} ${arena.active ? '— enemigos: ' + ents.length : '— siguiente en ' + Math.ceil(arena.wait) + 's'}</b>` : '') + (P.pet ? ' 🐾 ' + petName(P.pet) + ' [P ' + ((P.cds.pet || 0) > 0 ? Math.ceil(P.cds.pet) + 's' : '✔') + ']' : '') + (P.runes.gfb + P.runes.sd + P.runes.uh + P.runes.blank ? `<br>🔮 Runas: R GFB ${P.runes.gfb} · T SD ${P.runes.sd} · Y UH ${P.runes.uh} · en blanco ${P.runes.blank}` : '') + `<br>🕐 ${clock()} ${nightLevel() > .5 ? '🌙' : ''} · ${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
   $('log').innerHTML = msgs.map(m => `<div style="color:${m.c};opacity:${Math.min(1, m.a)}">${m.t}</div>`).join('');
   let h = ''; ACTIVE.forEach((id, i) => { const s = SKILLS[id], cd = P.cds[id] || 0; h += `<div class="slot" style="opacity:${P.sk[id] ? 1 : .35}"><span class="k">${i + 1}</span><b>${['💥', '🌀', '🔥', '✨'][i]}</b>${s.n.split(' ')[0]}<div class="cd" style="height:${cd / s.cd * 100}%"></div></div>`; });
   h += `<div class="slot"><span class="k">5</span><b>❤</b>x${P.cons.pocion_vida}</div><div class="slot"><span class="k">6</span><b>💧</b>x${P.cons.pocion_mana}</div>`;
@@ -1418,9 +1527,25 @@ function drawPanel() {
     h += gifts.map(k => `<button data-act="gift" data-k="${k}" ${P.gifted[n.id] === P.day ? 'disabled' : ''}>${MATS[k] || CONSUM[k].ico} ${k.replace('_', ' ')}${F.likes.includes(k) ? ' 💖' : ''}</button>`).join('') || '<i>No tienes nada que regalar.</i>';
     h += `<h3>Recompensas de amistad</h3>` + F.rew.map(([hh, d]) => `<div style="color:${hs >= hh ? '#9f9' : '#888'}">${hs >= hh ? '✔' : '○'} ${hh} 💖 — ${d}</div>`).join('');
   }
+  if (panel === 'market') {
+    h = close + `<h2>⚖ Casa de Subastas</h2><p>Pon objetos a la venta (máx. 8). Los compradores aparecen cada hora; cuanto más alto el precio respecto a su valor, menos probable es la venta. Comisión: 5%.</p>
+      <p>Ganancias por cobrar: 💰 ${P.marketGold || 0} <button data-act="mcollect" ${P.marketGold ? '' : 'disabled'}>Cobrar</button></p><h3>Tus subastas (${(P.market || []).length}/8)</h3>` +
+      ((P.market || []).map((l, i) => `<div>${l.item.name} <span class="c${l.item.rar}">[${RAR[l.item.rar]}]</span> — ${l.price} oro <small>(prob. ${Math.round(marketChance(l.item, l.price) * 100)}%/h)</small> <button data-act="mcancel" data-k="${i}">Retirar</button></div>`).join('') || '<i>Ninguna</i>') +
+      `<h3>Vender desde la mochila</h3><p><small>Precio sugerido = 2× valor. Clic = vender a 2×; clic derecho no aplica.</small> Multiplicador: <select id="mmult"><option value="1.2">1.2×</option><option value="1.6">1.6×</option><option value="2" selected>2×</option><option value="2.5">2.5×</option><option value="3">3×</option></select></p><div class="grid">${P.inv.map(it => itemHtml(it, 'mlist')).join('')}</div>
+      <h3>Ofertas de hoy</h3><div class="grid">${(P.mktStock || []).map((it, i) => `<div>${itemHtml(it, 'none')}<button data-act="mbuy" data-k="${i}" ${P.gold >= it.price ? '' : 'disabled'}>${it.price}💰</button></div>`).join('')}</div>`;
+  }
+  if (panel === 'tavern') {
+    const here = town.npcs.filter(n => n.state === 'tavern').map(n => n.n.split(' ')[0]);
+    h = close + `<h2>🍺 Taberna «El Ciervo Dorado»</h2><p>Abierta de 10:00 a 02:00. Ahora (${clock()}) están aquí: ${here.join(', ') || 'nadie conocido'}.</p>
+      <button data-act="tbuy" data-k="pan" data-p="20">🍞 Pan casero (20)</button><button data-act="tbuy" data-k="estofado" data-p="45">🍲 Estofado (45)</button><button data-act="tbuy" data-k="tarta" data-p="70">🍰 Tarta (70)</button><button data-act="tbuy" data-k="banquete" data-p="150">🍱 Banquete (150)</button>
+      <h3>Rumores</h3><button data-act="rumor">Escuchar rumores (5 oro)</button><p id="rumor" style="color:#fc8">${P.lastRumor || ''}</p>
+      <h3>Una ronda para todos</h3><button data-act="round" ${P.gold >= 50 ? '' : 'disabled'}>Invitar una ronda (50 oro): +5 amistad con quien esté aquí</button>`;
+  }
   if (panel === 'arena') {
     h = close + `<h2>🏟 Coliseo de Orario</h2><p>Lucha contra oleadas cada vez más fuertes, con un campeón cada 5 oleadas. Si mueres aquí no pierdes oro. Sal por la puerta sur cuando quieras.</p><p>Récord: oleada ${P.arenaBest || 0} · Fichas: 🎟 ${P.tokens || 0} · Horario 10:00–23:00 (${clock()})</p>
-      <button data-act="arenago" ${isOpen('arena') ? '' : 'disabled'}>⚔ Entrar a la arena</button><h3>Tienda de fichas</h3>
+      <button data-act="arenago" ${isOpen('arena') ? '' : 'disabled'}>⚔ Entrar a la arena</button>
+      <h3>🏆 Torneo semanal (cada 7 días · hoy es día ${P.day})</h3>${tourneyDay() ? (P.tourneyWeek === week() ? '<p>Ya participaste esta semana.</p>' : `<button data-act="tourney" ${isOpen('arena') ? '' : 'disabled'}>Inscribirse al torneo</button>`) : `<p>Próximo torneo: día ${P.day + (7 - P.day % 7)}.</p>`}
+      <p><small>Rivales de esta semana: ${rivals().map(r => r.n + ' (' + r.s + ')').join(' · ')} · Premios: 🥇100 🥈50 🥉25 fichas</small></p>${P.lastTourney ? `<p><small>Último torneo: puesto ${P.lastTourney.pos} (${P.lastTourney.table.join(', ')})</small></p>` : ''}<h3>Tienda de fichas</h3>
       <button data-act="tok" data-k="epic" ${(P.tokens || 0) >= 15 ? '' : 'disabled'}>Cofre épico (15 🎟)</button><button data-act="tok" data-k="leg" ${(P.tokens || 0) >= 50 ? '' : 'disabled'}>Cofre legendario (50 🎟)</button><button data-act="petelixir" ${(P.tokens || 0) >= 5 && P.pet ? '' : 'disabled'}>Elixir de mascota: +1 nivel (5 🎟)</button>`;
   }
   if (panel === 'dmerch') {
@@ -1473,7 +1598,7 @@ function drawPanel() {
 $('panel').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) panelAct(b.dataset.act, b.dataset, false); });
 $('panel').addEventListener('contextmenu', e => { e.preventDefault(); const b = e.target.closest('[data-act]'); if (b && b.dataset.act === 'equip') panelAct('sell', b.dataset, true); });
 $('panel').addEventListener('mousemove', e => { const b = e.target.closest('[data-uid]'), tip = $('tip'); if (!b) { tip.style.display = 'none'; return; } const it = findItem(+b.dataset.uid); if (!it) return; tip.innerHTML = itemTip(it); tip.style.display = 'block'; tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
-function findItem(u) { return P.inv.find(i => i.uid === u) || P.depot.find(i => i.uid === u) || (W.mstock || []).find(i => i.uid === u) || Object.values(P.eq).find(i => i && i.uid === u) || (P.chest || []).find(i => i.uid === u); }
+function findItem(u) { return P.inv.find(i => i.uid === u) || (P.mktStock || []).find(i => i.uid === u) || (P.market || []).map(l => l.item).find(i => i.uid === u) || P.depot.find(i => i.uid === u) || (W.mstock || []).find(i => i.uid === u) || Object.values(P.eq).find(i => i && i.uid === u) || (P.chest || []).find(i => i.uid === u); }
 function panelAct(a, d) {
   const it = d.uid ? findItem(+d.uid) : null;
   if (a === 'close') return closePanel();
@@ -1506,7 +1631,15 @@ function panelAct(a, d) {
   if (a === 'buymount' && MOUNTS[d.k] && P.gold >= MOUNTS[d.k].price && !P.mounts.includes(d.k)) { P.gold -= MOUNTS[d.k].price; P.mounts.push(d.k); P.mount = d.k; snd('lvl'); log('¡Compraste: ' + MOUNTS[d.k].n + '! Pulsa N para montar.', '#9cf'); }
   if (a === 'setmount') { P.mount = d.k; }
   if (a === 'petelixir') { if ((P.tokens || 0) >= 5 && P.pet) { P.tokens -= 5; petGainXp(petNeed(petData().lvl)); } }
+  if (a === 'mlist' && it) { const m = +(document.getElementById('mmult') || { value: 2 }).value; listItem(it.uid, it.value * m); }
+  if (a === 'mcancel') { const l = P.market[+d.k]; if (l && P.inv.length < 32) { P.market.splice(+d.k, 1); P.inv.push(l.item); } }
+  if (a === 'mcollect') { P.gold += P.marketGold || 0; log('Cobraste ' + (P.marketGold || 0) + ' oro de tus subastas.', '#fd4'); P.marketGold = 0; snd('pick'); }
+  if (a === 'mbuy') { const it2 = P.mktStock[+d.k]; if (it2 && P.gold >= it2.price && P.inv.length < 32) { P.gold -= it2.price; P.mktStock.splice(+d.k, 1); P.inv.push(it2); snd('pick'); } }
+  if (a === 'tbuy' && P.gold >= +d.p) { P.gold -= +d.p; P.cons[d.k]++; snd('pick'); }
+  if (a === 'rumor' && P.gold >= 5) { P.gold -= 5; P.lastRumor = pick(['«El mercader errante aparece siempre en los pisos 2, 5, 8…»', '«Bors paga bien el pescado… y Welf adora el hierro.»', '«Con lluvia pican más los peces dorados.»', '«En el Coliseo hay torneo cada 7 días. ¡El campeón gana 100 fichas!»', '«Si escribes adori vita vis con una runa en blanco… boom.»', '«Las mascotas evolucionan a nivel 10.»', '«En la Casa de Subastas, si pides demasiado, nadie compra.»']); }
+  if (a === 'round' && P.gold >= 50) { P.gold -= 50; town.npcs.filter(n => n.state === 'tavern' && n.id).forEach(n => addFriend(n.id, 5)); log('🍻 ¡Invitas una ronda! Todos brindan por ti.', '#fc8'); snd('lvl'); }
   if (a === 'arenago') { startArena(); return; }
+  if (a === 'tourney') { startArena(true); return; }
   if (a === 'tok') { const c = d.k === 'leg' ? 50 : 15; if ((P.tokens || 0) >= c && P.inv.length < 32) { P.tokens -= c; const it = genItem(null, Math.max(P.lvl, P.maxFloor), d.k === 'leg' ? 4 : 3); P.inv.push(it); log('🎁 ' + it.name + ' [' + RAR[it.rar] + ']', '#fd4'); snd('lvl'); } }
   if (a === 'hire') { const D = ALLIES[d.k], cost = D.price + P.lvl * 20; if (P.party.length < MAX_PARTY && P.gold >= cost && !P.party.find(x => x.id === d.k)) { P.gold -= cost; P.party.push({ id: d.k, hp: allyMaxHp(d.k), down: 0 }); buildComps(); log(D.n + ' (' + D.cls + ') se une a tu grupo.', '#9cf'); snd('lvl'); } }
   if (a === 'dismiss') { P.party = P.party.filter(x => x.id !== d.k); buildComps(); }
@@ -1519,6 +1652,7 @@ function panelAct(a, d) {
   if (a === 'buyequip') { const c = 60 + P.maxFloor * 25; if (P.gold >= c && P.inv.length < 32) { P.gold -= c; const n = genItem(null, P.maxFloor); P.inv.push(n); log('Compraste ' + n.name, '#9cf'); } }
   if (a === 'craft') {
     const r = RECIPES[+d.k]; if (!have(r.in)) return; if (!recipeStations(r).every(hasStation)) { log('Necesitas en tu casa: ' + recipeStations(r).map(x => STN_N[x]).join(', '), '#f88'); return; }
+    if (r.id === 'runa_blanca') { for (const k in r.in) P.mats[k] -= r.in[k]; P.runes.blank = (P.runes.blank || 0) + 2; P.crafted++; log('Fabricaste 2 runas en blanco. Escribe «adori gran», «adori vita vis» o «adura vita».', '#c9f'); drawPanel(); return; }
     if (r.id === 'cana') { for (const k in r.in) P.mats[k] -= r.in[k]; P.cana = 1; P.crafted++; log('¡Fabricaste una caña de pescar! Mira al agua y pulsa E.', '#6af'); drawPanel(); return; }
     if (r.id.startsWith('gear:') && P.inv.length >= 32) return log('Inventario lleno.', '#f88');
     for (const k in r.in) P.mats[k] -= r.in[k];
@@ -1526,7 +1660,7 @@ function panelAct(a, d) {
     else if (CONSUM[r.id]) P.cons[r.id] += r.n || 1; else P.blocks[r.id] = (P.blocks[r.id] || 0) + (r.n || 1);
     snd('build'); gainXp(2); P.crafted++;
   }
-  if (a === 'turnin') { const q = QUESTS[P.q]; if (P.qp >= q.c) { P.gold += q.g; gainXp(q.xp); log('Recompensa: ' + q.xp + ' XP y ' + q.g + ' oro.', '#fd4'); P.q++; P.qp = 0; const nq = QUESTS[P.q]; if (nq && nq.t === 'floor') P.qp = P.maxFloor; if (nq && nq.t === 'comfort') P.qp = comfort(); if (nq && nq.t === 'build') P.qp = 0; } }
+  if (a === 'turnin') { const q = QUESTS[P.q]; if (P.qp >= q.c) { questReward(q.rw); P.gold += q.g; gainXp(q.xp); log('Recompensa: ' + q.xp + ' XP y ' + q.g + ' oro.', '#fd4'); P.q++; P.qp = 0; const nq = QUESTS[P.q]; if (nq && nq.t === 'floor') P.qp = P.maxFloor; if (nq && nq.t === 'comfort') P.qp = comfort(); if (nq && nq.t === 'build') P.qp = 0; } }
   if (a === 'upgrade') upgradeHouse();
   if (a === 'floor') { closePanel(); return enterFloor(+d.k); }
   if (a === 'store' && it) { P.chest = P.chest || []; P.inv = P.inv.filter(i => i !== it); P.chest.push(it); }
@@ -1544,10 +1678,10 @@ function save() {
 }
 function load() {
   const s = JSON.parse(localStorage.getItem('cc_save') || 'null'); if (!s) return false;
-  const d = newPlayer(); P = Object.assign(d, s.P); P.mats = Object.assign(newPlayer().mats, s.P.mats); P.cons = Object.assign(newPlayer().cons, s.P.cons); P.buffs = P.buffs || {}; P.target = null; P.cds = {}; uid = s.uid || 1000; visitors = [];
+  const d = newPlayer(); P = Object.assign(d, s.P); P.mats = Object.assign(newPlayer().mats, s.P.mats); P.cons = Object.assign(newPlayer().cons, s.P.cons); P.buffs = P.buffs || {}; P.runes = Object.assign({ blank: 0, gfb: 0, sd: 0, uh: 0 }, s.P.runes); P.target = null; P.cds = {}; uid = s.uid || 1000; visitors = [];
   for (const k in SKILLS) P.sk[k] = P.sk[k] || 0;
   town = genTown(); town.obj = s.obj || {}; town.crops = s.crops || {};
-  P.trail = []; comps = [];
+  P.trail = []; comps = []; settleNPCs();
   if (P.floor > 0) enterFloor(P.floor); else if (P.field) enterField([P.x, P.y]); else { W = town; P.fx = P.x; P.fy = P.y; if (solidAt(P.x, P.y, true)) { P.x = 20; P.y = 7; P.fx = 20; P.fy = 7; } }
   buildComps(); return true;
 }
@@ -1590,4 +1724,4 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 // API de pruebas
-window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, castSpell, SPELLS, hour, clock, isOpen, nightLevel, startArena, nextWave, updateArena, get arena() { return arena; }, petGainXp, petData, petMult, petName, allyQuestEvent, allyMult, AQUEST, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };
+window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, useRune, RUNES, petAbility, PETAB, startArenaT: () => startArena(true), finishTourney, rivals, week, tourneyDay, listItem, marketTick, marketChance, updateMarket, updateNPCs, settleNPCs, npcGoal, questReward, xpNeed, castSpell, SPELLS, hour, clock, isOpen, nightLevel, startArena, nextWave, updateArena, get arena() { return arena; }, petGainXp, petData, petMult, petName, allyQuestEvent, allyMult, AQUEST, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };

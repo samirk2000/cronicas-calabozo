@@ -96,3 +96,14 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Misiones personales de aliados**: cada recluta tiene su historia (Mogzo, Merry, Yume, Shihoru, Ranta). Al completarla se vuelve **Veterano** (+40 % de vida y daño) y te da 300 de oro.
 - **Coliseo (arena PvE)**: oleadas cada vez más fuertes con un **campeón** cada 5. Cada oleada da oro, XP y fichas, y cada 5 oleadas hay un premio épico o legendario. Morir aquí no cuesta oro. Las fichas se canjean por cofres épicos o legendarios y por elixires de mascota. El récord queda guardado.
 - Las pruebas suben a **63** (`python3 tests/smoke_test.py`).
+
+## Novedades (iteración 7)
+- **Horarios de NPCs**: Eina, Bors, Welf, Hestia, el banquero, Ryu y Bárbara trabajan durante su horario, al cerrar se van a la **taberna** y de 22:00 a 07:00 duermen en su casa (no aparecen). Caminan por la ciudad con A*. Si les hablas en la taberna, te cuentan cosas.
+- **Taberna «El Ciervo Dorado»** (Mia, de 10:00 a 02:00): vende comida con buffs y rumores con pistas. «Invitar una ronda» da +5 de amistad con todos los presentes.
+- **Casa de Subastas**: pon a la venta hasta 8 objetos con un multiplicador de precio (5 % de comisión). Cada hora pasan compradores NPC simulados, y cuanto más caro sea el precio respecto al valor, menos probable es la venta. Las ganancias se cobran en el NPC. Además hay 4 ofertas diarias de otros vendedores.
+- **Runas estilo Tibia**: fabrica *runas en blanco* en la Mesa de alquimia y conjúralas escribiendo `adori gran` (Gran bola de fuego en área de 3×3, tecla **R**), `adori vita vis` (Muerte súbita, gran daño a un objetivo, **T**) o `adura vita` (curación definitiva, **Y**). Las runas apuntan solas a tu objetivo o al enemigo visible más cercano.
+- **Torneo semanal** en el Coliseo (cada 7 días): 12 oleadas contra la puntuación de rivales como Aiz, Bete u Ottar. Premios: 100/50/25 fichas, 5 por participar, y el logro y título «Campeón del Coliseo». Se puede entrar una vez por semana.
+- **Habilidades de mascota (tecla P)**: Perro, *Mordisco feroz* (gran daño y aturde); Halcón, *Picada* (3 golpes, o 5 si evolucionó); Gato, *Robo felino* (oro y posible objeto); Slime, *Curación gelatinosa* (30-45 % de vida y cura al grupo). Tienen recarga.
+- **Balance de inicio**: empiezas con 100 de oro, 5 pociones de vida, 2 de maná y 2 panes. La curva de XP es más suave y los monstruos dan más XP y oro, con más botín en los primeros pisos. Las primeras 4 misiones dan premios (kit de construcción, arma de tu clase, cama con antorchas y armadura rara). En ~30 combates y 4 misiones se llega a nivel 6 o más.
+- **Arreglo**: los textos flotantes ya no pasan de un mapa a otro.
+- Las pruebas suben a **72** (`python3 tests/smoke_test.py`).

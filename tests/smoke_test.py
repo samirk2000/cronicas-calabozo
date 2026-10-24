@@ -109,7 +109,7 @@ with sync_playwright() as p:
       const t0=P.mats.trigo; st.push(g.interact()); return {st, stage:c&&c.s, trigo:P.mats.trigo-t0, gone:!g.town.crops['29,8'], seeds:P.mats.semilla_trigo};""")
     check('plantar, regar, crecer y cosechar', r['st'][0]=='plant' and r['st'][1]=='water' and r['stage']==3 and r['trigo']>=2 and r['gone'], r)
     r = G("""const P=g.P; P.mats.trigo=10; P.mats.zanahoria=5; P.mats.fresa=5; P.mats.hierba=5; const a0=(()=>{return 0})();
-      P.blocks.cocina=1; g.setBuild(g.BLOCKIDS().indexOf('cocina')); g.placeBlock(34,12); const before=JSON.stringify(P.buffs); const i=g.RECIPES.findIndex(r=>r.id==='pan'); g.panelAct('craft',{k:String(i)}); const pan=P.cons.pan;
+      P.cons.pan=0; P.blocks.cocina=1; g.setBuild(g.BLOCKIDS().indexOf('cocina')); g.placeBlock(34,12); const before=JSON.stringify(P.buffs); const i=g.RECIPES.findIndex(r=>r.id==='pan'); g.panelAct('craft',{k:String(i)}); const pan=P.cons.pan;
       g.closePanel(); const base=g.P.eq.arma; P.cds={}; const atk0=(P.buffs.fuerza?1:0); g.usePot('pan'); const j=g.RECIPES.findIndex(r=>r.id==='tarta'); g.panelAct('craft',{k:String(j)}); g.usePot('tarta');
       const xp0=P.xp, l0=P.lvl; g.gainXp(10); return {pan, buffs:Object.keys(P.buffs), xp:P.lvl>l0||P.xp-xp0==14};""")
     check('cocinar y comer da buffs (fuerza, XP +40%)', r['pan']==1 and 'fuerza' in r['buffs'] and 'sabiduria' in r['buffs'] and r['xp'], r)
@@ -315,6 +315,63 @@ with sync_playwright() as p:
       g.startArena(); g.P.x=8; g.P.y=14; g.checkExit(); return {leg, closed, back:g.W===g.town, tok:P.tokens}""")
     check('tienda de fichas, horario de arena y salida por la puerta', r['leg'] and r['closed'] and r['back'], r)
     G("g.startArena(); g.nextWave(); g.P.hp=1e6"); time.sleep(1); pg.screenshot(path=ROOT + '/tests/shot_arena.png'); G("g.enterTown()")
+
+
+    # 31 Balance de inicio (primeros ~30 min)
+    r = G("""localStorage.removeItem('cc_save'); g.newGame('guerrero'); const P=g.P; const start={gold:P.gold, pv:P.cons.pocion_vida, pan:P.cons.pan};
+      const need=[1,2,3,4,5].map(l=>g.xpNeed(l)); let inv0=P.inv.length;
+      g.questEvent('gather','madera',5); g.panelAct('turnin',{}); const kit=P.blocks.muro_madera>=6;
+      g.enterFloor(1); for(let f=1;f<=3;f++){ g.enterFloor(f); const list=[...g.ents]; for(const e of list.slice(0,10)) g.killEnemy(e); g.drops.forEach(d=>{d.x=P.x;d.y=P.y}); g.pickup(); if(f===1){ g.panelAct('turnin',{}); } }
+      const weap=P.inv.some(i=>i.slot==='arma'&&i.rar===1); g.questEvent('build',null,6); g.panelAct('turnin',{}); const cama=P.blocks.cama>=1; g.panelAct('turnin',{});
+      return {start, need, lvl:P.lvl, gold:P.gold, items:P.inv.length-inv0, kit, weap, cama, q:P.q, sp:P.sp, kp:P.kp};""")
+    check('inicio generoso: 100 oro, 5 pociones, 2 panes', r['start']['gold']==100 and r['start']['pv']==5 and r['start']['pan']==2, r['start'])
+    check('progresión temprana: ~30 kills + 4 misiones → nivel ≥6, oro ≥300, botín y premios', r['lvl']>=6 and r['gold']>=300 and r['items']>=4 and r['kit'] and r['weap'] and r['cama'] and r['q']==4, r)
+
+    # 32 Horarios de NPCs y taberna
+    r = G("""g.enterTown(); const P=g.P; P.x=20; P.y=12; P.fx=20; P.fy=12; const bors=g.town.npcs.find(n=>n.role==='shop'), tav=g.town.npcs.find(n=>n.role==='tavern');
+      P.dayT=60; g.settleNPCs(); const work=[bors.x,bors.y,bors.state]; P.dayT=145; for(let i=0;i<400 && !(bors.x===bors.seat[0]&&bors.y===bors.seat[1]);i++) g.updateNPCs(0.5); const atTav=[bors.x,bors.y].join()===bors.seat.join(), st=bors.state;
+      g.talk.direct=1; const off=g.talk(bors); g.talk.direct=0; P.dayT=170; for(let i=0;i<400 && !bors.hidden;i++) g.updateNPCs(0.5); const hidden=bors.hidden; g.render();
+      P.dayT=140; g.settleNPCs(); g.talk.direct=1; g.talk(tav); g.talk.direct=0; const tpnl=g.panel; const html=document.getElementById('panel').innerHTML; P.gold=500; g.panelAct('tbuy',{k:'estofado',p:'45'}); g.panelAct('round',{}); g.closePanel();
+      P.dayT=60; g.settleNPCs(); return {work, atTav, st, off, hidden, tpnl, html:html.includes('Bors'), tavOpenLate:(P.dayT=190, g.isOpen('tavern')), tavClosed:(P.dayT=225, !g.isOpen('tavern'))};""")
+    G("g.P.dayT=40; g.settleNPCs()")
+    check('NPCs: trabajo de día → taberna al cerrar → casa de noche', r['work'][2]=='work' and r['atTav'] and r['st']=='tavern' and r['off']=='offduty' and r['hidden'], r)
+    check('taberna: horario 10–02, comida, ronda y clientes', r['tpnl']=='tavern' and r['html'] and r['tavOpenLate'] and r['tavClosed'], r)
+
+    # 33 Casa de subastas
+    r = G("""const P=g.P; P.market=[]; P.marketGold=0; P.gold=1000; const a={uid:70001,slot:'anillo',rar:2,lvl:5,name:'Anillo barato',st:{int:3},value:100}, b={uid:70002,slot:'anillo',rar:2,lvl:5,name:'Anillo carísimo',st:{int:3},value:100};
+      P.inv.push(a,b); g.listItem(70001,120); g.listItem(70002,1000); const fee=1000-P.gold; const ca=g.marketChance(a,120), cb=g.marketChance(b,1000);
+      let soldA=-1; for(let h=0;h<200;h++){ g.marketTick(); if(soldA<0 && !P.market.some(l=>l.item.uid===70001)) soldA=h; } const bLeft=P.market.some(l=>l.item.uid===70002);
+      const mg=P.marketGold; g.panelAct('mcollect',{}); g.updateMarket(0); const stock=(P.mktStock||[]).length; const g0=P.gold; if(stock) g.panelAct('mbuy',{k:'0'});
+      g.openPanel('market'); g.closePanel();
+      return {fee, ca, cb, soldA, mg, collected:P.marketGold===0, stock, bought:P.gold<g0};""")
+    check('subastas: comisión, precio alto vende menos, cobrar y comprar ofertas', r['fee']==56 and r['ca']>r['cb']*5 and r['soldA']>=0 and r['mg']>=120 and r['collected'] and r['stock']==4 and r['bought'], r)
+
+    # 34 Runas
+    r = G("""const P=g.P; P.lvl=20; P.mp=9999; P.cds={}; P.runes={blank:0,gfb:0,sd:0,uh:0}; const noBlank=g.castSpell('adori gran');
+      Object.assign(P.mats,{piedra:20,cristal:10}); g.enterTown(); P.blocks.alquimia=1; g.setBuild(g.BLOCKIDS().indexOf('alquimia')); g.placeBlock(30,13); const ri=g.RECIPES.findIndex(r=>r.id==='runa_blanca'); g.panelAct('craft',{k:String(ri)}); g.closePanel(); const blanks=P.runes.blank;
+      P.cds={}; const r1=g.castSpell('adori gran'); P.cds={}; const r2=g.castSpell('adori vita vis'); P.mp=9999; P.cds={};
+      g.enterFloor(1); g.ents.length=0; let pos=null; for(const [ox,oy] of [[2,0],[-2,0],[0,2],[0,-2]]) if(!g.solidAt(P.x+ox,P.y+oy,true)&&g.los(P.x,P.y,P.x+ox,P.y+oy)){pos=[P.x+ox,P.y+oy];break}
+      if(!pos) return {skip:1}; const e=g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false); e.hp=e.mhp=99999; e.spd=99;e.mcd=99;e.cd=99; const h0=e.hp; const u1=g.useRune('gfb'); const h1=e.hp; P.cds={}; const u2=g.useRune('sd'); const h2=e.hp; P.cds={}; const u3=g.useRune('sd');
+      g.ents.length=0; return {noBlank, blanks, r1, r2, u1, gfb:h1<h0, u2, sd:(h1-h2)>(h0-h1), u3};""")
+    check('runas: requieren runa en blanco, se crean con palabras y se usan (R/T)', r.get('skip') or (r['noBlank']=='blank' and r['blanks']==2 and r['r1']=='rune' and r['r2']=='rune' and r['u1']=='used' and r['gfb'] and r['u2']=='used' and r['sd'] and r['u3']=='none'), r)
+
+    # 35 Habilidades de mascota (P)
+    r = G("""const P=g.P; g.enterFloor(1); P.hp=1e6; P.pets=['perro','gato','halcon','slime']; const out={};
+      for(const id of ['perro','halcon','gato','slime']){ P.pet=id; g.buildComps(); g.ents.length=0; const c=g.comps.find(c=>c.kind==='pet'); let pos=null;
+        for(const [ox,oy] of [[1,0],[-1,0],[0,1],[0,-1]]) if(!g.solidAt(c.x+ox,c.y+oy)){pos=[c.x+ox,c.y+oy];break}
+        const e=pos?g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false):null; if(e){e.hp=e.mhp=99999;e.cd=0;} P.hp=P.hp; if(id==='slime') P.hp=10; P.cds.pet=0; const g0=P.gold, h0=e?e.hp:0;
+        const res=g.petAbility(); out[id]={res, dmg:e?h0-e.hp:0, stun:e?e.cd>=2:false, gold:P.gold-g0, heal:id==='slime'?P.hp>10:null, cd:g.petAbility()}; P.hp=1e6; }
+      g.ents.length=0; return out;""")
+    check('habilidades de mascota: mordisco aturde, picada, robo de oro, curación; recarga', r['perro']['res']=='used' and r['perro']['stun'] and r['halcon']['dmg']>0 and r['gato']['gold']>0 and r['slime']['heal'] and all(r[k]['cd']=='cd' for k in r), r)
+
+    # 36 Torneo semanal
+    r = G("""const P=g.P; g.enterTown(); P.dayT=60; P.hp=1e6; P.day=6; const notToday=!g.startArenaT(); P.day=7; P.tourneyWeek=-1; const t0=P.tokens||0; const ok=g.startArenaT();
+      for(let w=0; w<12; w++){ g.arena.wait=0; g.updateArena(0.01); g.ents.length=0; g.updateArena(0.01); if(!g.arena) break; }
+      const ended=!g.arena, back=g.W===g.town, last=P.lastTourney, tok=P.tokens-t0; const again=!g.startArenaT(); g.checkAch(); return {notToday, ok, ended, back, pos:last&&last.pos, score:last&&last.score, tok, again, champ:!!P.ach.torneo, wins:P.tourneyWins};""")
+    check('torneo semanal: solo día 7, 12 oleadas, puesto 1 → 100 fichas y título, una vez por semana', r['notToday'] and r['ok'] and r['ended'] and r['back'] and r['pos']==1 and r['score']==12 and r['tok']>=100 and r['again'] and r['champ'], r)
+    r = G("""const P=g.P; P.day=14; P.tourneyWeek=-1; g.startArenaT(); g.arena.wait=0; g.updateArena(0.01); g.ents.length=0; g.updateArena(0.01); g.arena.wait=0; g.updateArena(0.01); P.gold=100; g.die('torneo'); g.closePanel(); return {pos:P.lastTourney.pos, score:P.lastTourney.score, gold:P.gold}""")
+    check('morir en torneo cuenta el puntaje sin perder oro', r['score']==1 and r['pos']>=4 and r['gold']==100, r)
+    G("g.P.dayT=140; g.settleNPCs(); g.enterTown([22,21]);"); time.sleep(.6); pg.screenshot(path=ROOT + '/tests/shot_tavern.png'); G("g.P.dayT=40; g.settleNPCs()")
 
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
