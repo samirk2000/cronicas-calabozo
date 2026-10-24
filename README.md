@@ -135,3 +135,10 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Móvil**: toca el suelo para caminar hasta allí (A*). Si tocas un NPC, un recurso o un cofre, caminas hasta él y lo usas; si tocas un enemigo, lo fijas como objetivo. **Mantén pulsado** (0,5 s) sobre una casilla para ver su información: enemigo con nivel y PV, NPC con horario, aliado, botín, mueble con su confort o terreno.
 - **Caché de sprites**: los personajes y los monstruos se dibujan una vez por fotograma de animación en un canvas aparte y luego solo se copian. Dibujar 3000 personajes pasa de unos 44–53 ms a unos 20 ms.
 - **Pantalla de título nueva**: logo procedural original (la Torre de Valdoria con su luz, la ciudad, brasas, una espada y el título dorado) y una **intro animada** de cinco líneas sobre el origen de Valdoria. Se ve una vez y se puede repetir con «📜 Ver intro».
+
+## Iteración 12
+- Prueba i18n (tests/i18n_check.py): marca cadenas en español sin traducir (945 literales, 0 pendientes).
+- Móvil: mantener y arrastrar para caminar (hold-to-walk).
+- Caché de sprites para muebles pesados (HEAVY_BLOCKS) y botín en el suelo.
+- Biomas profundos (piso 41+): Jardín de Cristal Vivo y Ciudad Sumergida, alternando cada 10 pisos, cada uno con 5 enemigos nuevos y 2 jefes (sufijo +N después del piso 60).
+- Renacimiento/prestigio (nivel 40 + piso 40, en el templo): puntos para 6 bonos permanentes; se conservan equipo, oro, casa, mascotas, aliados e historia.
