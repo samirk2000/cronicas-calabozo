@@ -137,6 +137,7 @@ const RECIPES = [
   { id: 'banera', in: { piedra: 8, hierro: 3 } }, { id: 'piano', in: { madera: 15, hierro: 5 } }, { id: 'fuente', in: { piedra: 20, cristal: 3 } },
   { id: 'armero', in: { madera: 4, hierro: 4 } }, { id: 'trofeo', in: { cristal: 8, hierro: 5 } }, { id: 'valla', in: { madera: 1 }, n: 3 },
   { id: 'cultivo', in: { madera: 1, hierba: 1 }, n: 2 },
+  { id: 'pergamino_prot', in: { cristal: 3, hierba: 4, madera: 2 }, name: 'Pergamino de protección' },
   { id: 'runa_blanca', in: { piedra: 2, cristal: 1 }, n: 2, name: 'Runa en blanco' },
   { id: 'cana', in: { madera: 3, hierba: 2 }, name: 'Caña de pescar' },
   { id: 'forja', in: { piedra: 10, hierro: 3 } }, { id: 'cocina', in: { piedra: 6, madera: 4 } }, { id: 'alquimia', in: { madera: 4, hierba: 3, piedra: 2 } },
@@ -153,6 +154,7 @@ function recipeStations(r) {
   if (r.id.startsWith('gear:')) return +r.id.split(':')[2] >= 3 ? ['yunque', 'forja'] : ['yunque'];
   if (CONSUM[r.id] && CONSUM[r.id].food) return ['cocina'];
   if (r.id.startsWith('pocion') || r.id === 'runa_blanca') return ['alquimia'];
+  if (r.id === 'pergamino_prot') return ['alquimia', 'yunque'];
   return [];
 }
 const STN_N = { yunque: 'Yunque', forja: 'Forja', cocina: 'Cocina', alquimia: 'Mesa de alquimia' };
@@ -169,7 +171,7 @@ const BUFFN = { prisa: '💨 Prisa (utani hur)', escudo: '🔵 Escudo mágico (u
 const RAR = ['Común', 'Poco común', 'Raro', 'Épico', 'Legendario'];
 const SLOTS = { arma: '⚔', armadura: '🛡', casco: '⛑', anillo: '💍' };
 const PREF = { arma: ['Espada', 'Hacha', 'Maza', 'Estoque', 'Katana', 'Arco', 'Báculo'], armadura: ['Cota', 'Peto', 'Túnica', 'Coraza'], casco: ['Yelmo', 'Capucha', 'Casco'], anillo: ['Anillo', 'Sortija', 'Sello'] };
-const SUF = ['del Lobo', 'de Orario', 'de Aincrad', 'de Grimgar', 'del Alba', 'de la Bestia', 'del Héroe', 'del Abismo', 'Rúnico', 'Ancestral'];
+const SUF = ['del Lobo', 'de Valdoria', 'de Bruma', 'de Hierroalto', 'del Alba', 'de la Bestia', 'del Héroe', 'del Abismo', 'Rúnico', 'Ancestral'];
 let uid = 1;
 function genItem(slot, lvl, rar, pref) {
   if (rar == null) { const r = Math.random() * 100 - (P ? P.sk.fortuna * 4 : 0); rar = r < 1.5 ? 4 : r < 7 ? 3 : r < 20 ? 2 : r < 45 ? 1 : 0; }
@@ -222,7 +224,7 @@ const THEMES = [
   { n: 'Abismo Ígneo', g: ['#4a2a22', '#42261e'], w: '#200a08', wt: '#6a2a1a', wl: '#4a1a10', fog: [15, 0, 0], torch: [255, 100, 40] },
 ];
 const theme = f => THEMES[Math.floor((f - 1) / 10) % THEMES.length];
-const BOSSES = ['Minotauro', 'Rey Goblin', 'Gleam Eyes', 'Señor Esqueleto', 'Udaeus', 'Juggernaut', 'Hidra del Abismo'];
+const BOSSES = ['Minotauro', 'Rey Goblin', 'Ojos de Ascua', 'Señor Esqueleto', 'Coloso de Hueso', 'Devastador Abisal', 'Hidra del Abismo'];
 
 // ---------- Misiones ----------
 const QUESTS = [
@@ -254,7 +256,7 @@ function newPlayer() {
     base: { fue: 5, vit: 5, agi: 5, int: 5 }, sp: 0, kp: 0, sk: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 0])),
     inv: [], mats: Object.fromEntries(Object.keys(MATS).map(k => [k, 0])), cons: { pocion_vida: 5, pocion_mana: 2, pan: 2, estofado: 0, tarta: 0, banquete: 0 }, buffs: {}, cls: 'guerrero', gifts: 0, blocks: {},
     eq: { arma: null, armadura: null, casco: null, anillo: null }, cds: {}, atkCd: 0, maxFloor: 1, floor: 0,
-    q: 0, qp: 0, house: 1, binds: ['exura', 'exori', 'utani hur', 'exevo gran mas vis'], runes: { blank: 0, gfb: 0, sd: 0, uh: 0 }, story: { node: 'inicio', p: 0, ready: 0, choices: [], path: null }, perks: {}, storyUnlock: {}, guildHall: 0, allyRest: true, market: [], marketGold: 0, mktStock: [], mktDay: 0, tourneyWeek: -1, tokens: 0, arenaBest: 0, petLv: {}, allyQ: {}, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 20, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
+    q: 0, qp: 0, house: 1, binds: ['exura', 'exori', 'utani hur', 'exevo gran mas vis'], ipv: 1, tut: 0, tutF: {}, steps: 0, runes: { blank: 0, gfb: 0, sd: 0, uh: 0 }, story: { node: 'inicio', p: 0, ready: 0, choices: [], path: null }, perks: {}, storyUnlock: {}, guildHall: 0, allyRest: true, market: [], marketGold: 0, mktStock: [], mktDay: 0, tourneyWeek: -1, tokens: 0, arenaBest: 0, petLv: {}, allyQ: {}, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 20, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
   };
 }
 function stat(k) { let v = P.base[k] || 0; for (const s in P.eq) if (P.eq[s]) v += Math.round((P.eq[s].st[k] || 0) * (1 + (P.eq[s].plus || 0) * .08)); return v; }
@@ -275,7 +277,7 @@ const gt = (m, x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h) ? T.DWALL : m.t
 const st = (m, x, y, v) => { if (x >= 0 && y >= 0 && x < m.w && y < m.h) { m.t[y * m.w + x] = v; m._ver = (m._ver || 0) + 1; if (m._cc) m._cc[((y >> 4) * 1000) + (x >> 4)] = null; } };
 
 function genTown() {
-  const m = makeMap(48, 36, T.GRASS); m.name = 'Ciudad de Orario';
+  const m = makeMap(48, 36, T.GRASS); m.name = 'Ciudad de Valdoria';
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     if (x < 2 || y < 2 || x >= m.w - 2 || y >= m.h - 2) { st(m, x, y, T.TREE); continue; }
     const r = hash(x, y);
@@ -292,17 +294,17 @@ function genTown() {
   setPlot(P ? P.house || 1 : 1); paintPlot(m);
   for (let y = 14; y < 15; y++) st(m, 30, y, T.PATH);
   m.npcs = [
-    { x: 22, y: 7, n: 'Eina (Gremio)', col: '#4ae', role: 'quest', id: 'eina' },
-    { x: 17, y: 16, n: 'Bors (Mercader)', col: '#da4', role: 'shop', id: 'bors' },
-    { x: 23, y: 16, n: 'Welf (Herrero)', col: '#e54', role: 'smith', id: 'welf' },
-    { x: 18, y: 7, n: 'Hestia (Diosa)', col: '#fff', role: 'god', id: 'hestia' },
-    { x: 10, y: 5, n: 'Banco de Orario', col: '#2a6', role: 'bank' },
+    { x: 22, y: 7, n: 'Noa (Gremio)', col: '#4ae', role: 'quest', id: 'noa' },
+    { x: 17, y: 16, n: 'Gaspar (Mercader)', col: '#da4', role: 'shop', id: 'gaspar' },
+    { x: 23, y: 16, n: 'Brann (Herrero)', col: '#e54', role: 'smith', id: 'brann' },
+    { x: 18, y: 7, n: 'Aurelia (Diosa)', col: '#fff', role: 'god', id: 'aurelia' },
+    { x: 10, y: 5, n: 'Banco de Valdoria', col: '#2a6', role: 'bank' },
     { x: 14, y: 5, n: 'Depósito', col: '#865', role: 'depot' },
     { x: 11, y: 11, n: 'Templo (Sacerdotisa)', col: '#eee', role: 'temple' },
-    { x: 27, y: 20, n: 'Ryu (Establo)', col: '#3a8', role: 'stable' },
+    { x: 27, y: 20, n: 'Tadeo (Establo)', col: '#3a8', role: 'stable' },
     { x: 16, y: 5, n: 'Bárbara (Reclutas)', col: '#c4c', role: 'recruit' },
     { x: 34, y: 17, n: 'Coliseo (Arena)', col: '#c33', role: 'arena' },
-    { x: 23, y: 20, n: 'Mia (Taberna)', col: '#c85', role: 'tavern' },
+    { x: 23, y: 20, n: 'Rufina (Taberna)', col: '#c85', role: 'tavern' },
     { x: 12, y: 13, n: 'Casa de Subastas', col: '#a8f', role: 'market' },
   ];
   const bld = (x0, y0, w, h, col) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) st(m, x, y, T.WALL); m.roofs.push([x0, y0, w, h, col]); };
@@ -444,7 +446,7 @@ function solidAt(x, y, ignoreEnt) {
 // ---------- Llanuras (mundo abierto) ----------
 let field = null;
 function genField() {
-  const w = 70, h = 52, m = makeMap(w, h, T.GRASS); m.name = 'Llanuras de Orario'; m.npcs = []; m.isField = 1; m.regrow = [];
+  const w = 70, h = 52, m = makeMap(w, h, T.GRASS); m.name = 'Llanuras de Valdoria'; m.npcs = []; m.isField = 1; m.regrow = [];
   const n = (x, y, s) => (hash(Math.floor(x / s), Math.floor(y / s) + 999) * .6 + hash(x, y + 77) * .4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) { st(m, x, y, T.TREE); continue; }
@@ -510,7 +512,7 @@ function settleNPCs() { if (!town) return; for (const n of town.npcs) if (n.sche
 function marketChance(it, price) { const r = price / it.value; return Math.max(.01, Math.min(.6, .35 * (2.6 - r) / 1.6)); }
 function marketTick() {
   let sold = 0;
-  P.market = (P.market || []).filter(l => { if (Math.random() < marketChance(l.item, l.price)) { P.marketGold = (P.marketGold || 0) + l.price; sold++; log('💰 ' + pick(['Un aventurero de Loki', 'Un mercader de Rakia', 'La Familia Soma', 'Un enano herrero', 'Un noble elfo']) + ' compró tu ' + l.item.name + ' por ' + l.price + ' oro.', '#fd4'); return false; } return true; });
+  P.market = (P.market || []).filter(l => { if (Math.random() < marketChance(l.item, l.price)) { P.marketGold = (P.marketGold || 0) + l.price; sold++; log('💰 ' + pick(['Un aventurero de Varkas', 'Un mercader de Puertosal', 'La Casa del Vino', 'Un enano herrero', 'Un noble elfo']) + ' compró tu ' + l.item.name + ' por ' + l.price + ' oro.', '#fd4'); return false; } return true; });
   if (sold) snd('pick'); return sold;
 }
 let mktT = 0;
@@ -524,13 +526,13 @@ function listItem(uid, price) {
 // ---------- Arena ----------
 let arena = null;
 function genArena() {
-  const m = makeMap(17, 15, T.WALL); m.name = 'Coliseo de Orario'; m.npcs = []; m.isArena = 1; m.regrow = [];
+  const m = makeMap(17, 15, T.WALL); m.name = 'Coliseo de Valdoria'; m.npcs = []; m.isArena = 1; m.regrow = [];
   for (let y = 1; y < 14; y++) for (let x = 1; x < 16; x++) st(m, x, y, T.SAND);
   for (const [x, y] of [[4, 4], [12, 4], [4, 10], [12, 10]]) st(m, x, y, T.ROCK);
   st(m, 8, 14, T.EXIT); m.torches = new Set(['3,0', '8,0', '13,0']); return m;
 }
 const week = () => Math.floor((P.day - 1) / 7), tourneyDay = () => P.day % 7 === 0;
-function rivals() { const w = week(); return ['Bete Loga', 'Aiz Wallenstein', 'Ottar', 'Lefiya', 'Kirito', 'Ranta'].map((n, i) => ({ n, s: 4 + Math.floor(hash(w, i * 13) * 8) })).sort((a, b) => b.s - a.s).slice(0, 4); }
+function rivals() { const w = week(); return ['Garrik el Lobo', 'Selin Vientoalba', 'Ulrik el Coloso', 'Nerea Rúnica', 'Kael Espadanegra', 'Corvo'].map((n, i) => ({ n, s: 4 + Math.floor(hash(w, i * 13) * 8) })).sort((a, b) => b.s - a.s).slice(0, 4); }
 function startArena(tourney) {
   if (!isOpen('arena')) return false;
   if (tourney && (!tourneyDay() || P.tourneyWeek === week())) return false;
@@ -600,6 +602,7 @@ addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 function onKey(k) {
   if (k === 'escape') { if (fishing) { fishing = null; return; } if (panel) closePanel(); else if (buildMode) { buildMode = false; } return; }
   if (k === 'tab') return togglePanel('worldmap');
+  if (k === '?') return togglePanel('keys');
   if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'n') return toggleMount();
   if (k === 'enter') { openChat(); return; }
   if (k === 'r') { useRune('gfb'); return; } if (k === 't') { useRune('sd'); return; } if (k === 'y') { useRune('uh'); return; }
@@ -607,6 +610,7 @@ function onKey(k) {
   if (/^f[1-4]$/.test(k)) { castSpell(P.binds[+k[1] - 1]); return; } if (k === 'm') return toggleMusic();
   if (panel) return;
   if (fishing) { if (k === 'e' || k === 'escape') { fishing = null; log('Recoges la caña.', '#aaa'); } return; }
+  if (k === 'b') tutFlag('build');
   if (k === 'b') { if (W !== town) return log('Solo puedes construir en la ciudad.', '#f88'); buildMode = !buildMode; log(buildMode ? 'Modo construcción: Espacio coloca, X quita, Q/R cambia bloque.' : 'Modo construcción desactivado.', '#fc6'); return; }
   if (buildMode) {
     const ids = Object.keys(BLOCKS);
@@ -637,6 +641,8 @@ document.querySelectorAll('#touch button').forEach(b => {
   b.addEventListener('touchstart', e => { e.preventDefault(); touchDir = b.dataset.d.split(',').map(Number); });
   b.addEventListener('touchend', e => { e.preventDefault(); touchDir = null; });
 });
+document.addEventListener('click', e => { const b = e.target.closest('[data-tut]'); if (b) skipTut(); const m = e.target.closest('[data-menu]'); if (m) { if (m.dataset.menu === 'map') togglePanel('worldmap'); else onKey(m.dataset.menu); } });
+if (isTouch || matchMedia('(max-width: 700px)').matches) document.body.classList.add('mobile');
 document.querySelectorAll('#tact button').forEach(b => b.addEventListener('touchstart', e => { e.preventDefault(); onKey(b.dataset.k); }));
 
 // gamepad
@@ -671,6 +677,7 @@ function interact() {
   log('No hay nada aquí.', '#888');
 }
 function gather(x, y, t) {
+  tutFlag('gather');
   if (P.gcd > 0) return; P.gcd = .35;
   const r = RES[t], key = x + ',' + y; W.hp[key] = (W.hp[key] ?? r.hp) - 1;
   snd('gather'); burst(x * TS + 16, y * TS + 16, t === T.TREE ? '#6a4' : t === T.HERB ? '#5e5' : t === T.CRYSTAL ? '#8ef' : '#aaa', 6);
@@ -685,10 +692,10 @@ function gather(x, y, t) {
   }
 }
 const FRIENDS = {
-  eina: { n: 'Eina', likes: ['tarta', 'fresa', 'pez_dorado', 'sushi'], rew: [[2, '100 oro', () => P.gold += 100], [4, '+1 punto de habilidad', () => P.kp++], [6, '500 oro', () => P.gold += 500], [8, '+2 puntos de habilidad', () => P.kp += 2], [10, 'Anillo épico del Gremio', () => P.inv.push(genItem('anillo', Math.max(P.lvl, P.maxFloor), 3))]] },
-  bors: { n: 'Bors', likes: ['pescado', 'hierro', 'cristal', 'pescado_asado'], rew: [[3, '5 pociones de vida', () => P.cons.pocion_vida += 5], [6, '1000 oro', () => P.gold += 1000], [10, '10 pociones de maná', () => P.cons.pocion_mana += 10]] },
-  welf: { n: 'Welf', likes: ['hierro', 'cristal', 'pan', 'estofado'], rew: [[3, 'Arma rara forjada', () => P.inv.push(genItem('arma', Math.max(P.lvl, P.maxFloor), 2))], [6, 'Armadura épica', () => P.inv.push(genItem('armadura', Math.max(P.lvl, P.maxFloor), 3))], [10, 'Arma legendaria «Crozzo»', () => { const it = genItem('arma', Math.max(P.lvl, P.maxFloor) + 5, 4); it.name = 'Espada Mágica Crozzo'; P.inv.push(it); }]] },
-  hestia: { n: 'Hestia', likes: ['pan', 'banquete', 'fresa', 'tarta'], rew: [[2, '+3 puntos de estado', () => P.sp += 3], [5, '3 banquetes', () => P.cons.banquete += 3], [8, '+5 puntos de estado', () => P.sp += 5], [10, 'Bendición: +3 puntos de habilidad', () => P.kp += 3]] },
+  noa: { n: 'Noa', likes: ['tarta', 'fresa', 'pez_dorado', 'sushi'], rew: [[2, '100 oro', () => P.gold += 100], [4, '+1 punto de habilidad', () => P.kp++], [6, '500 oro', () => P.gold += 500], [8, '+2 puntos de habilidad', () => P.kp += 2], [10, 'Anillo épico del Gremio', () => P.inv.push(genItem('anillo', Math.max(P.lvl, P.maxFloor), 3))]] },
+  gaspar: { n: 'Gaspar', likes: ['pescado', 'hierro', 'cristal', 'pescado_asado'], rew: [[3, '5 pociones de vida', () => P.cons.pocion_vida += 5], [6, '1000 oro', () => P.gold += 1000], [10, '10 pociones de maná', () => P.cons.pocion_mana += 10]] },
+  brann: { n: 'Brann', likes: ['hierro', 'cristal', 'pan', 'estofado'], rew: [[3, 'Arma rara forjada', () => P.inv.push(genItem('arma', Math.max(P.lvl, P.maxFloor), 2))], [6, 'Armadura épica', () => P.inv.push(genItem('armadura', Math.max(P.lvl, P.maxFloor), 3))], [10, 'Arma legendaria «Ascua»', () => { const it = genItem('arma', Math.max(P.lvl, P.maxFloor) + 5, 4); it.name = 'Espada Mágica Ascua'; P.inv.push(it); }]] },
+  aurelia: { n: 'Aurelia', likes: ['pan', 'banquete', 'fresa', 'tarta'], rew: [[2, '+3 puntos de estado', () => P.sp += 3], [5, '3 banquetes', () => P.cons.banquete += 3], [8, '+5 puntos de estado', () => P.sp += 5], [10, 'Bendición: +3 puntos de habilidad', () => P.kp += 3]] },
 };
 const hearts = id => Math.min(10, Math.floor((P.friend[id] || 0) / 10));
 const ACH = [
@@ -704,7 +711,7 @@ const ACH = [
   { id: 'f25', n: 'Conquistador de la Torre', d: 'Llega al piso 25', c: () => P.maxFloor >= 25, g: 1500 },
   { id: 'boss', n: 'Matagigantes', d: 'Derrota a un jefe', c: () => P.bosses >= 1, g: 200 },
   { id: 'rare', n: 'Brillo dorado', d: 'Derrota a un monstruo raro', c: () => P.rares >= 1, g: 200 },
-  { id: 'l10', n: 'Nivel 2 de Falna', d: 'Alcanza el nivel 10', c: () => P.lvl >= 10, g: 200 },
+  { id: 'l10', n: 'Segundo Sello', d: 'Alcanza el nivel 10', c: () => P.lvl >= 10, g: 200 },
   { id: 'l25', n: 'Aventurero de élite', d: 'Alcanza el nivel 25', c: () => P.lvl >= 25, g: 1000 },
   { id: 'craft', n: 'Artesano', d: 'Fabrica 20 objetos', c: () => P.crafted >= 20, g: 150 },
   { id: 'farm', n: 'Granjero', d: 'Cosecha 10 cultivos', c: () => P.harvests >= 10, g: 150 },
@@ -713,8 +720,8 @@ const ACH = [
   { id: 'cozy', n: 'Hogar dulce hogar', d: 'Alcanza 30 de confort', c: () => comfort() >= 30, g: 200 },
   { id: 'mansion', n: 'Terrateniente', d: 'Mejora tu casa a Mansión', c: () => P.house >= 3, g: 500 },
   { id: 'friend', n: 'Mejores amigos', d: '10 corazones con un NPC', c: () => Object.keys(FRIENDS).some(k => hearts(k) >= 10), g: 500 },
-  { id: 'rich', n: 'Millonario de Orario', d: 'Ten 5000 de oro', c: () => P.gold >= 5000, g: 0 },
-  { id: 'year', n: 'Un año en Orario', d: 'Vive las 4 estaciones (día 22)', c: () => P.day >= 22, g: 500 },
+  { id: 'rich', n: 'Millonario de Valdoria', d: 'Ten 5000 de oro', c: () => P.gold >= 5000, g: 0 },
+  { id: 'year', n: 'Un año en Valdoria', d: 'Vive las 4 estaciones (día 22)', c: () => P.day >= 22, g: 500 },
 ];
 function checkAch() { for (const a of ACH) if (!P.ach[a.id] && a.c()) { P.ach[a.id] = 1; P.gold += a.g; log('🏆 ¡Logro desbloqueado: ' + a.n + '! (+' + a.g + ' oro)', '#fd4'); snd('lvl'); addText(P.fx * TS + 16, P.fy * TS - 20, '🏆 ' + a.n, '#fd4', 16); } }
 function addFriend(id, pts) {
@@ -731,7 +738,7 @@ function giveGift(id, item) {
   log(FRIENDS[id].n + (liked ? ': «¡Me encanta! ¡Gracias!» 💖' : ': «Gracias, muy amable.»'), '#f9c'); snd('pick'); return pts;
 }
 function toggleMount() {
-  if (!P.mount) { log('No tienes montura. Cómprala en el Establo de Ryu.', '#f88'); return false; }
+  if (!P.mount) { log('No tienes montura. Cómprala en el Establo de Tadeo.', '#f88'); return false; }
   P.riding = !P.riding; snd('pick'); log(P.riding ? 'Montas tu ' + MOUNTS[P.mount].n + '.' : 'Desmontas.', '#9cf'); return P.riding;
 }
 function talk(n) {
@@ -744,7 +751,7 @@ function talk(n) {
   if (n.role === 'quest') return openPanel('quests');
   if (n.role === 'shop') return openPanel('shop');
   if (n.role === 'smith') return openPanel('craft');
-  if (n.role === 'god') { log('Hestia: «Pulsa H para mejorar nuestro hogar.»', '#fcf'); if (P.sp + P.kp > 0) log('Hestia: «¡Tienes puntos sin usar! Abre I y K para actualizar tu Falna.»', '#fcf'); else log('Hestia: «¡Cuídate en el calabozo! Te espero en casa.»', '#fcf'); P.hp = maxHp(); P.mp = maxMp(); }
+  if (n.role === 'god') { log('Aurelia: «Pulsa H para mejorar nuestro hogar.»', '#fcf'); if (P.sp + P.kp > 0) log('Aurelia: «¡Tienes puntos sin usar! Abre I y K para actualizar tu Sello.»', '#fcf'); else log('Aurelia: «¡Cuídate en el calabozo! Te espero en casa.»', '#fcf'); P.hp = maxHp(); P.mp = maxMp(); }
 }
 function placeBlock(x, y) {
   const id = Object.keys(BLOCKS)[buildSel];
@@ -759,7 +766,7 @@ function farm(x, y) {
   const k = x + ',' + y, c = town.crops[k];
   if (!c) {
     const sd = ['trigo', 'zanahoria', 'fresa'].find(t => P.mats['semilla_' + t] > 0 && (!P.seedPref || P.seedPref === t)) || ['trigo', 'zanahoria', 'fresa'].find(t => P.mats['semilla_' + t] > 0);
-    if (!sd) return log('No tienes semillas. Cómpralas a Bors o búscalas entre las hierbas.', '#f88');
+    if (!sd) return log('No tienes semillas. Cómpralas a Gaspar o búscalas entre las hierbas.', '#f88');
     P.mats['semilla_' + sd]--; town.crops[k] = { t: sd, s: 0, w: 0, g: 0 }; snd('build'); burst(x * TS + 16, y * TS + 16, '#7c4', 6); log('Plantaste ' + CROPS[sd].n + '. ¡Riégalo (E)!', '#9e9'); return 'plant';
   }
   if (c.s >= 3) {
@@ -786,10 +793,10 @@ function drawCrop(x, y, sx, sy) {
   if (!c.w && c.s < 3) { cx.font = '11px sans-serif'; cx.textAlign = 'center'; cx.fillText('💧', sx + 16, sy + 8 + Math.sin(time * 4) * 2); }
 }
 // ===== Visitantes =====
-const VNAMES = ['Ais', 'Lili', 'Asuna', 'Kirito', 'Haruhiro', 'Yume', 'Merry', 'Ranta', 'Ryu', 'Klein', 'Shiho', 'Mogzo'];
+const VNAMES = ['Alma', 'Pipa', 'Lucía', 'Teo', 'Hugo', 'Tala', 'Selene', 'Corvo', 'Tadeo', 'Bruno', 'Elena', 'Bruno'];
 let visitors = [], visitT = 20;
 function comfortTier(c) { return c < 8 ? 0 : c < 25 ? 1 : c < 50 ? 2 : 3; }
-const VLINES = [['Hmm… está un poco vacío aquí.', 'Le falta algo de vida a tu casa.'], ['¡Qué lugar tan acogedor!', 'Me gusta tu decoración.'], ['¡Wow, qué casa tan bonita!', 'Podría quedarme aquí todo el día.'], ['¡Es una mansión digna de un héroe!', '¡Todo Orario habla de tu hogar!']];
+const VLINES = [['Hmm… está un poco vacío aquí.', 'Le falta algo de vida a tu casa.'], ['¡Qué lugar tan acogedor!', 'Me gusta tu decoración.'], ['¡Wow, qué casa tan bonita!', 'Podría quedarme aquí todo el día.'], ['¡Es una mansión digna de un héroe!', '¡Todo Valdoria habla de tu hogar!']];
 function spawnVisitor() {
   const c = comfort(); if (c < 3 || visitors.length >= 1 + comfortTier(c)) return null;
   const free = []; for (let y = PLOT.y; y < PLOT.y + PLOT.h; y++) for (let x = PLOT.x; x < PLOT.x + PLOT.w; x++) if (!solidAt(x, y)) free.push([x, y]);
@@ -919,7 +926,7 @@ function gainXp(n) {
 }
 function questReward(rw) {
   if (!rw) return;
-  if (rw === 'kit') { P.blocks.muro_madera = (P.blocks.muro_madera || 0) + 6; P.blocks.suelo_madera = (P.blocks.suelo_madera || 0) + 4; P.mats.semilla_trigo += 3; log('🎁 Eina te da un kit de construcción (6 muros, 4 suelos) y semillas.', '#fd4'); }
+  if (rw === 'kit') { P.blocks.muro_madera = (P.blocks.muro_madera || 0) + 6; P.blocks.suelo_madera = (P.blocks.suelo_madera || 0) + 4; P.mats.semilla_trigo += 3; log('🎁 Noa te da un kit de construcción (6 muros, 4 suelos) y semillas.', '#fd4'); }
   if (rw === 'arma') { const C = CLASSES[P.cls] || CLASSES.guerrero, it = genItem('arma', Math.max(2, P.lvl), 1, C.w); P.inv.push(it); log('🎁 Recompensa: ' + it.name + ' [Poco común]', '#5e5'); }
   if (rw === 'cama') { P.blocks.cama = (P.blocks.cama || 0) + 1; P.blocks.antorcha = (P.blocks.antorcha || 0) + 2; log('🎁 Recompensa: una cama y 2 antorchas para tu casa.', '#fd4'); }
   if (rw === 'armadura') { const it = genItem('armadura', Math.max(3, P.lvl), 2); P.inv.push(it); log('🎁 Recompensa: ' + it.name + ' [Raro]', '#5af'); }
@@ -927,7 +934,7 @@ function questReward(rw) {
 function questEvent(type, key, n) {
   const q = QUESTS[P.q]; if (!q || q.t !== type) return; if (q.k && q.k !== key) return;
   if (type === 'floor' || type === 'comfort') P.qp = Math.max(P.qp, n); else P.qp += n;
-  if (P.qp >= q.c) log('Misión «' + q.n + '» completada. Habla con Eina en el gremio.', '#7f7');
+  if (P.qp >= q.c) log('Misión «' + q.n + '» completada. Habla con Noa en el gremio.', '#7f7');
 }
 function hurtPlayer(d, src) {
   d = Math.max(1, Math.round(d * rnd(.85, 1.15) - def() * .5));
@@ -988,15 +995,15 @@ const MOUNTS = {
   lobo: { n: 'Lobo gigante', price: 2500, col: '#556', spd: .5, atk: .1, d: 'Muévete un 50% más rápido y +10% ataque.' },
 };
 const ALLIES = {
-  mogzo: { n: 'Mogzo', cls: 'Guerrero', col: '#a63', hp: 2.2, dmg: 1, range: 1, price: 200, taunt: 1 },
-  merry: { n: 'Merry', cls: 'Sacerdotisa', col: '#ddf', hp: 1.2, dmg: .5, range: 3, price: 300, healer: 1 },
-  yume: { n: 'Yume', cls: 'Cazadora', col: '#da5', hp: 1.3, dmg: .9, range: 5, price: 250 },
-  shihoru: { n: 'Shihoru', cls: 'Maga', col: '#649', hp: 1, dmg: 1.3, range: 4, price: 300, magic: 1 },
-  ranta: { n: 'Ranta', cls: 'Caballero Oscuro', col: '#333', hp: 1.6, dmg: 1.2, range: 1, price: 250 },
+  bruno: { n: 'Bruno', cls: 'Guerrero', col: '#a63', hp: 2.2, dmg: 1, range: 1, price: 200, taunt: 1 },
+  selene: { n: 'Selene', cls: 'Sacerdotisa', col: '#ddf', hp: 1.2, dmg: .5, range: 3, price: 300, healer: 1 },
+  tala: { n: 'Tala', cls: 'Cazadora', col: '#da5', hp: 1.3, dmg: .9, range: 5, price: 250 },
+  iris: { n: 'Iris', cls: 'Maga', col: '#649', hp: 1, dmg: 1.3, range: 4, price: 300, magic: 1 },
+  corvo: { n: 'Corvo', cls: 'Caballero Oscuro', col: '#333', hp: 1.6, dmg: 1.2, range: 1, price: 250 },
 };
 const MAX_PARTY = 2;
-ALLIES.wiene = { n: 'Wiene', cls: 'Vouivre', col: '#7cf', hp: 1.6, dmg: 1.3, range: 3, price: 0, story: 1 };
-ALLIES.lili = { n: 'Lili', cls: 'Supporter', col: '#ec8', hp: 1.1, dmg: .6, range: 3, price: 0, story: 1 };
+ALLIES.ysra = { n: 'Ysra', cls: 'Dracónida', col: '#7cf', hp: 1.6, dmg: 1.3, range: 3, price: 0, story: 1 };
+ALLIES.pipa = { n: 'Pipa', cls: 'Supporter', col: '#ec8', hp: 1.1, dmg: .6, range: 3, price: 0, story: 1 };
 const EVO = { perro: { n: 'Cerbero', col: '#622' }, gato: { n: 'Nekomata', col: '#c5f' }, halcon: { n: 'Grifo', col: '#db6' }, slime: { n: 'Rey Slime', col: '#3cf' } };
 function petData(id = P.pet) { P.petLv = P.petLv || {}; return P.petLv[id] || (P.petLv[id] = { lvl: 1, xp: 0 }); }
 const petNeed = l => Math.round(40 * Math.pow(l, 1.5));
@@ -1025,11 +1032,11 @@ function petAbility() {
 const petMult = id => (1 + (petData(id).lvl - 1) * .12) * (petData(id).lvl >= 10 ? 1.5 : 1);
 // misiones personales de aliados
 const AQUEST = {
-  mogzo: { n: 'El escudo de Mogzo', d: 'Derrota 30 monstruos con Mogzo en el grupo.', t: 'kill', c: 30 },
-  merry: { n: 'Superar el pasado', d: 'Llega al piso 8 con Merry en el grupo.', t: 'floor', c: 8 },
-  yume: { n: 'Cazadora de lobos', d: 'Derrota 8 Lobos sombríos con Yume.', t: 'killName', k: 'Lobo sombrío', c: 8 },
-  shihoru: { n: 'Valor de maga', d: 'Derrota a un jefe con Shihoru.', t: 'boss', c: 1 },
-  ranta: { n: 'Camino del Dread Knight', d: 'Derrota 3 monstruos raros o 40 monstruos con Ranta.', t: 'kill', c: 40, rareAlt: 3 },
+  bruno: { n: 'El escudo de Bruno', d: 'Derrota 30 monstruos con Bruno en el grupo.', t: 'kill', c: 30 },
+  selene: { n: 'Fe recuperada', d: 'Llega al piso 8 con Selene en el grupo.', t: 'floor', c: 8 },
+  tala: { n: 'Cazadora de lobos', d: 'Derrota 8 Lobos sombríos con Tala.', t: 'killName', k: 'Lobo sombrío', c: 8 },
+  iris: { n: 'Valor de maga', d: 'Derrota a un jefe con Iris.', t: 'boss', c: 1 },
+  corvo: { n: 'Camino del Caballero Sombrío', d: 'Derrota 3 monstruos raros o 40 monstruos con Corvo.', t: 'kill', c: 40, rareAlt: 3 },
 };
 const allyMult = id => (P.allyQ && P.allyQ[id] && P.allyQ[id].done ? 1.4 : 1) * (1 + (typeof guildBonus === 'function' && town ? guildBonus() : 0));
 function allyQuestEvent(type, name, n, extra) {
@@ -1173,11 +1180,11 @@ function useRune(id) {
 }
 function openChat() { const c = document.getElementById('chat'); c.style.display = 'block'; c.value = ''; c.focus(); }
 
-// ---------- Mejora de equipo (forja de Welf) ----------
+// ---------- Mejora de equipo (forja de Brann) ----------
 function buyProt() { const c = 400 + (P.protBought || 0) * 0; if (P.gold < c) { log('Un pergamino de protección cuesta 400 oro.', '#f88'); return false; } P.gold -= c; P.prot = (P.prot || 0) + 1; P.protBought = (P.protBought || 0) + 1; snd('coin'); log('📜 Compraste un Pergamino de protección (' + P.prot + ').', '#9cf'); return true; }
 const ENCH_CH = [100, 95, 88, 80, 70, 60, 50, 40, 30, 20];
 function enchantCost(it) { const p = it.plus || 0; return { oro: Math.round(40 * (p + 1) * (p + 1) * (1 + it.rar * .5)), hierro: (p + 1) * 2, cristal: p >= 4 ? p - 3 : 0 }; }
-function enchantChance(it) { return Math.min(100, ENCH_CH[it.plus || 0] + (hearts('welf') >= 6 ? 5 : 0) + (P.enchProt ? 0 : 0)); }
+function enchantChance(it) { return Math.min(100, ENCH_CH[it.plus || 0] + (hearts('brann') >= 6 ? 5 : 0) + (P.enchProt ? 0 : 0)); }
 function enchant(uid, roll, prot) {
   if (prot == null) prot = P.useProt;
   const it = P.inv.find(i => i.uid === uid) || Object.values(P.eq).find(i => i && i.uid === uid); if (!it) return 'noitem';
@@ -1261,32 +1268,32 @@ function openChest(x, y) {
 // ---------- Historia con decisiones ----------
 const STORY = {
   inicio: { n: 'Capítulo 1: El llamado', d: 'Llega al piso 2 del calabozo.', t: 'floor', c: 2,
-    q: '«Dos Familias se fijan en ti tras tu primer descenso.» ¿A quién juras lealtad?',
-    ch: [{ t: '❤ Quedarme con la Familia Hestia (+10% XP, amistad con Hestia)', path: 'hestia', fx: () => { P.perks.xp = .1; addFriend('hestia', 20); }, next: 'hestia1' },
-      { t: '🐺 Aliarme con la Familia Loki (+10% daño, 500 oro)', path: 'loki', fx: () => { P.perks.dmg = .1; P.gold += 500; }, next: 'loki1' }] },
-  hestia1: { n: 'Capítulo 2: La pequeña ladrona', d: 'Derrota 15 monstruos en las Llanuras.', t: 'fieldkill', c: 15,
-    q: 'Atrapas a Lili, una supporter que robó el cuchillo de Hestia. Llora y te pide perdón.',
-    ch: [{ t: '🤝 Perdonarla y ofrecerle un lugar (Lili se une como aliada gratis)', fx: () => { P.storyUnlock.lili = 1; if (P.party.length < MAX_PARTY) { P.party.push({ id: 'lili', hp: allyMaxHp('lili'), down: 0 }); buildComps(); } }, next: 'final' },
-      { t: '⚖ Entregarla al Gremio (1000 oro y +20 amistad con Eina)', fx: () => { P.gold += 1000; addFriend('eina', 20); }, next: 'final' }] },
-  loki1: { n: 'Capítulo 2: La expedición de Loki', d: 'Llega al piso 8 con la expedición.', t: 'floor', c: 8,
-    q: 'La expedición encuentra un arma legendaria. Loki dice que puedes quedártela… si te arriesgas a su ira.',
-    ch: [{ t: '🎁 Ofrecerla a Loki (título «Favorito de Loki», 30 fichas)', fx: () => { P.tokens = (P.tokens || 0) + 30; P.storyTitle = 'Favorito de Loki'; }, next: 'final' },
-      { t: '⚔ Quedármela (arma legendaria, Loki te mira con recelo)', fx: () => { P.inv.push(genItem('arma', Math.max(P.lvl, 8) + 3, 4)); P.lokiRival = 1; }, next: 'final' }] },
-  final: { n: 'Capítulo 3: El Minotauro', d: 'Derrota al jefe del piso 10.', t: 'boss10', c: 1,
-    q: 'El Minotauro cae. Toda Orario habla de ti. ¿Qué harás ahora?',
-    ch: [{ t: '🌟 Aceptar la fama (título «Leyenda de Orario», 2000 oro)', fx: () => { P.gold += 2000; P.storyTitle = 'Leyenda de Orario'; }, next: 'xenos' },
-      { t: '🏠 Volver a casa con tu Familia (+5 puntos de habilidad)', fx: () => { P.kp += 5; P.storyTitle = 'Corazón de la Familia'; }, next: 'xenos' }] },
-  xenos: { n: 'Capítulo 4: La Xenos', d: 'Llega al piso 15.', t: 'floor', c: 15,
-    q: 'En el piso 15 encuentras a Wiene, una monstruo que habla y te pide ayuda. Los cazadores de Ikelos la persiguen.',
-    ch: [{ t: '🐉 Protegerla (Wiene se une como aliada; los cazadores te odian)', fx: () => { P.storyUnlock.wiene = 1; P.hunters = 1; if (P.party.length < MAX_PARTY) { P.party.push({ id: 'wiene', hp: allyMaxHp('wiene'), down: 0 }); buildComps(); } }, next: 'traicion' },
-      { t: '💰 Entregarla a los cazadores (3000 oro y equipo épico)', fx: () => { P.gold += 3000; P.inv.push(genItem(null, Math.max(P.lvl, 15) + 2, 3)); P.wieneSold = 1; }, next: 'traicion' }] },
+    q: '«Tras tu primer descenso, dos Casas divinas de Valdoria te ofrecen su emblema.» ¿Bajo qué Casa servirás?',
+    ch: [{ t: '❤ Quedarme con la Casa Aurelia (+10% XP, amistad con Aurelia)', path: 'aurelia', fx: () => { P.perks.xp = .1; addFriend('aurelia', 20); }, next: 'aurelia1' },
+      { t: '🐺 Aliarme con la Casa Varkas (+10% daño, 500 oro)', path: 'varkas', fx: () => { P.perks.dmg = .1; P.gold += 500; }, next: 'varkas1' }] },
+  aurelia1: { n: 'Capítulo 2: La pequeña ladrona', d: 'Derrota 15 monstruos en las Llanuras.', t: 'fieldkill', c: 15,
+    q: 'Atrapas a Pipa, una porteadora que robó la Llama Votiva del santuario de Aurelia. Jura que lo hizo para pagar la deuda de su hermano.',
+    ch: [{ t: '🤝 Perdonarla y ofrecerle un lugar (Pipa se une como aliada gratis)', fx: () => { P.storyUnlock.pipa = 1; if (P.party.length < MAX_PARTY) { P.party.push({ id: 'pipa', hp: allyMaxHp('pipa'), down: 0 }); buildComps(); } }, next: 'final' },
+      { t: '⚖ Entregarla al Gremio (1000 oro y +20 amistad con Noa)', fx: () => { P.gold += 1000; addFriend('noa', 20); }, next: 'final' }] },
+  varkas1: { n: 'Capítulo 2: La expedición de Varkas', d: 'Llega al piso 8 con la expedición.', t: 'floor', c: 8,
+    q: 'La expedición halla una espada forjada antes de la Torre. Varkas, el dios lobo, sonríe: «Quédatela… si te atreves a deberme algo.»',
+    ch: [{ t: '🎁 Ofrecerla a Varkas (título «Favorito de Varkas», 30 fichas)', fx: () => { P.tokens = (P.tokens || 0) + 30; P.storyTitle = 'Favorito de Varkas'; }, next: 'final' },
+      { t: '⚔ Quedármela (arma legendaria, Varkas te mira con recelo)', fx: () => { P.inv.push(genItem('arma', Math.max(P.lvl, 8) + 3, 4)); P.lokiRival = 1; }, next: 'final' }] },
+  final: { n: 'Capítulo 3: La Bestia Encadenada', d: 'Derrota al jefe del piso 10.', t: 'boss10', c: 1,
+    q: 'La Bestia Encadenada, que rompió sus cadenas en el piso 10, cae. Toda Valdoria canta tu nombre. ¿Qué harás ahora?',
+    ch: [{ t: '🌟 Aceptar la fama (título «Leyenda de Valdoria», 2000 oro)', fx: () => { P.gold += 2000; P.storyTitle = 'Leyenda de Valdoria'; }, next: 'hablantes' },
+      { t: '🏠 Volver a casa con tu Casa (+5 puntos de habilidad)', fx: () => { P.kp += 5; P.storyTitle = 'Corazón de la Casa'; }, next: 'hablantes' }] },
+  hablantes: { n: 'Capítulo 4: Los Hablantes', d: 'Llega al piso 15.', t: 'floor', c: 15,
+    q: 'En el piso 15 encuentras a Ysra, una dracónida de los Hablantes —monstruos que despertaron con voz y memoria—. Los cazadores del Sabueso Negro la persiguen.',
+    ch: [{ t: '🐉 Protegerla (Ysra se une como aliada; los cazadores te odian)', fx: () => { P.storyUnlock.ysra = 1; P.hunters = 1; if (P.party.length < MAX_PARTY) { P.party.push({ id: 'ysra', hp: allyMaxHp('ysra'), down: 0 }); buildComps(); } }, next: 'traicion' },
+      { t: '💰 Entregarla a los cazadores (3000 oro y equipo épico)', fx: () => { P.gold += 3000; P.inv.push(genItem(null, Math.max(P.lvl, 15) + 2, 3)); P.allySold = 1; }, next: 'traicion' }] },
   traicion: { n: 'Capítulo 5: La traición', d: 'Derrota al jefe del piso 20.', t: 'boss20', c: 1,
-    q: () => P.wieneSold ? 'El jefe era una trampa de Ikelos: te usaron. Su líder Dix está herido frente a ti.' : 'Dix, líder de los cazadores, cae junto al jefe. Wiene mira con miedo.',
-    ch: [{ t: '⚔ Acabar con Dix (+15% daño permanente)', fx: () => { P.perks.dmg = (P.perks.dmg || 0) + .15; }, next: 'dragon' },
-      { t: '⛓ Entregarlo al Gremio (+20% XP, Eina +30)', fx: () => { P.perks.xp = (P.perks.xp || 0) + .2; addFriend('eina', 30); }, next: 'dragon' }] },
-  dragon: { n: 'Capítulo 6: El Dragón Negro', d: 'Derrota al jefe del piso 30.', t: 'boss30', c: 1,
-    q: 'El Dragón Negro, la gran amenaza bajo Orario, ha caído. Los dioses te ofrecen una recompensa.',
-    ch: [{ t: '👑 Convertirte en el Héroe de Orario (título, 10 puntos de habilidad)', fx: () => { P.kp += 10; P.storyTitle = 'Héroe de Orario'; }, next: 'fin' },
+    q: () => P.allySold ? 'El jefe era una trampa del Sabueso Negro: te usaron. Su líder, Mordo Kast, está herido frente a ti.' : 'Mordo Kast, líder del Sabueso Negro, cae junto al jefe. Ysra lo mira con miedo.',
+    ch: [{ t: '⚔ Acabar con Mordo Kast (+15% daño permanente)', fx: () => { P.perks.dmg = (P.perks.dmg || 0) + .15; }, next: 'dragon' },
+      { t: '⛓ Entregarlo al Gremio (+20% XP, Noa +30)', fx: () => { P.perks.xp = (P.perks.xp || 0) + .2; addFriend('noa', 30); }, next: 'dragon' }] },
+  dragon: { n: 'Capítulo 6: El Dragón de Ceniza', d: 'Derrota al jefe del piso 30.', t: 'boss30', c: 1,
+    q: 'El Dragón de Ceniza, que dormía bajo los cimientos de Valdoria, ha caído. Los dioses te ofrecen una recompensa.',
+    ch: [{ t: '👑 Convertirte en el Héroe de Valdoria (título, 10 puntos de habilidad)', fx: () => { P.kp += 10; P.storyTitle = 'Héroe de Valdoria'; }, next: 'fin' },
       { t: '🗝 Reclamar el tesoro del dragón (arma y armadura legendarias, título «Matadragones»)', fx: () => { P.inv.push(genItem('arma', Math.max(P.lvl, 30) + 3, 4), genItem('armadura', Math.max(P.lvl, 30) + 3, 4)); P.storyTitle = 'Matadragones'; }, next: 'fin' }] },
   fin: { n: 'Epílogo', d: '¡Historia completada! Sigue explorando la Torre.', t: 'none', c: 1 },
 };
@@ -1303,6 +1310,32 @@ function storyChoose(i) {
   const N = storyNode(); if (N && N.t === 'floor') storyEvent('floor', P.maxFloor);
   return true;
 }
+
+// ---------- Tutorial contextual ----------
+const TUT = [
+  { id: 'move', h: '🚶 Muévete con <b>WASD</b> o las flechas (en el móvil, la cruz de la izquierda).', done: () => (P.steps || 0) >= 6 },
+  { id: 'talk', h: '💬 Ponte frente a <b>Noa</b> (Gremio, en la plaza) y pulsa <b>E</b> para hablar y recibir tu primera misión.', done: () => P.tutF.npc },
+  { id: 'gather', h: '🌲 Ponte frente a un árbol o una roca y pulsa <b>E</b> para recolectar madera o piedra.', done: () => P.tutF.gather },
+  { id: 'inv', h: '🎒 Pulsa <b>I</b> para ver tu inventario y estadísticas. Haz clic en un objeto para equiparlo.', done: () => P.tutF.inv },
+  { id: 'out', h: '🗺 Sal de la ciudad: la Torre está al norte y las Llanuras al sur (letreros). <b>Tab</b> abre el mapa.', done: () => W !== town },
+  { id: 'fight', h: '⚔ Acércate a un monstruo: atacas solo. <b>Espacio</b> golpea y <b>1-4</b> usan habilidades; <b>5</b> bebe poción.', done: () => P.kills >= 1 },
+  { id: 'level', h: '⭐ ¡Sube de nivel! Reparte puntos de estado en <b>I</b> y de habilidad en <b>K</b>.', done: () => P.tutF.skills || P.tutF.inv2, when: () => P.lvl >= 2 },
+  { id: 'build', h: '🏠 En la ciudad, pulsa <b>C</b> para fabricar y <b>B</b> para construir en tu parcela (H: tu casa).', done: () => P.tutF.craft || P.tutF.build },
+  { id: 'help', h: '❓ Hay muchos sistemas más. Pulsa <b>?</b> (o el botón ❓) cuando quieras ver todas las teclas.', done: () => P.tutF.help },
+];
+function tutFlag(k) { if (P && P.tutF) { if (k === 'inv' && P.tutF.inv && P.lvl >= 2) P.tutF.inv2 = 1; P.tutF[k] = 1; } }
+function tutStep() {
+  if (!P || P.tut == null || P.tut >= TUT.length) return null;
+  while (P.tut < TUT.length && TUT[P.tut].done()) { P.tut++; if (P.tut < TUT.length) snd('ui'); else { log('🎓 ¡Tutorial completado! Pulsa ? para ver las teclas cuando quieras.', '#9f9'); snd('lvl'); P.gold += 50; } }
+  const T0 = TUT[P.tut]; if (!T0 || (T0.when && !T0.when())) return null; return T0;
+}
+function updateTut() {
+  const el = $('tut'); if (!el) return; const t = tutStep();
+  if (!t) { el.style.display = 'none'; return; }
+  const k = t.id + P.tut; if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = `<small>Tutorial ${P.tut + 1}/${TUT.length}</small><br>${t.h}<br><button data-tut="skip">Saltar tutorial</button>`; }
+  el.style.display = 'block';
+}
+function skipTut() { P.tut = TUT.length; updateTut(); log('Tutorial omitido. Pulsa ? para ver las teclas.', '#aaa'); }
 
 // ---------- Partículas ----------
 function burst(x, y, col, n) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(30, 160); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, l: rnd(.3, .7), col, sz: rnd(2, 4) }); } }
@@ -1329,7 +1362,7 @@ function update(dt) {
     if (dx || dy) {
       P.dir = [dx, dy];
       const sw = comps.find(c => c.x === P.x + dx && c.y === P.y + dy); if (sw) { sw.x = P.x; sw.y = P.y; sw.fx = sw.x; sw.fy = sw.y; }
-      if (!solidAt(P.x + dx, P.y + dy)) { P.trail.push([P.x, P.y]); if (P.trail.length > 6) P.trail.shift(); P.x += dx; P.y += dy; P.mdx = dx; P.mdy = dy; P.mt = moveTime(); if (Math.random() < .3) snd('step'); pickup(); checkExit(); stepEvents(); reveal(); }
+      if (!solidAt(P.x + dx, P.y + dy)) { P.trail.push([P.x, P.y]); if (P.trail.length > 6) P.trail.shift(); P.x += dx; P.y += dy; P.mdx = dx; P.mdy = dy; P.mt = moveTime(); if (Math.random() < .3) snd('step'); pickup(); checkExit(); stepEvents(); reveal(); P.steps = (P.steps || 0) + 1; }
     }
   }
   // auto ataque si hay enemigo adyacente
@@ -1430,7 +1463,7 @@ function drawTile(x, y, t, sx, sy) {
   if (t === T.TREE && SE.n === 'Invierno') { cx.fillStyle = '#eef'; cx.fillRect(sx + 6, sy + 2, 20, 4); }
   if (t === T.CHEST) { cx.fillStyle = th.g[0]; cx.fillRect(sx, sy, TS, TS); cx.fillStyle = '#8a5a1a'; cx.fillRect(sx + 4, sy + 10, 24, 18); cx.fillStyle = '#fd4'; cx.fillRect(sx + 4, sy + 16, 24, 3); cx.fillRect(sx + 14, sy + 14, 4, 6); cx.fillStyle = `rgba(255,220,100,${.3 + Math.sin(time * 4) * .2})`; cx.fillRect(sx + 2, sy + 6, 28, 2); }
   if (!CACHING && W.seenTraps && W.seenTraps.has(x + ',' + y)) { cx.fillStyle = '#888'; for (let i = 0; i < 4; i++) { cx.beginPath(); cx.moveTo(sx + 5 + i * 7, sy + 26); cx.lineTo(sx + 8 + i * 7, sy + 16); cx.lineTo(sx + 11 + i * 7, sy + 26); cx.fill(); } }
-  if (t === T.EXIT) { cx.fillStyle = '#a8946a'; cx.fillRect(sx, sy, TS, TS); cx.fillStyle = '#6a4a2a'; cx.fillRect(sx + 14, sy + 10, 4, 20); cx.fillStyle = '#c9a060'; cx.fillRect(sx + 4, sy + 4, 24, 10); cx.fillStyle = '#000'; cx.font = '9px sans-serif'; cx.textAlign = 'center'; cx.fillText(W === town ? 'Llanuras' : 'Orario', sx + 16, sy + 12); }
+  if (t === T.EXIT) { cx.fillStyle = '#a8946a'; cx.fillRect(sx, sy, TS, TS); cx.fillStyle = '#6a4a2a'; cx.fillRect(sx + 14, sy + 10, 4, 20); cx.fillStyle = '#c9a060'; cx.fillRect(sx + 4, sy + 4, 24, 10); cx.fillStyle = '#000'; cx.font = '9px sans-serif'; cx.textAlign = 'center'; cx.fillText(W === town ? 'Llanuras' : 'Valdoria', sx + 16, sy + 12); }
   if (t === T.STUMP) { cx.fillStyle = '#6a4a2a'; cx.fillRect(sx + 11, sy + 18, 10, 8); cx.fillStyle = '#a08050'; cx.fillRect(sx + 12, sy + 17, 8, 3); }
   if (t === T.ROCK || t === T.ORE || t === T.CRYSTAL) {
     cx.fillStyle = t === T.CRYSTAL ? '#335' : '#7a7a80'; cx.beginPath(); cx.moveTo(sx + 4, sy + 28); cx.lineTo(sx + 8, sy + 8); cx.lineTo(sx + 20, sy + 4); cx.lineTo(sx + 29, sy + 14); cx.lineTo(sx + 28, sy + 28); cx.fill();
@@ -1529,7 +1562,7 @@ function drawEnemy(e) {
   if (e.hp < e.mhp || e.boss) { const w = e.boss ? 48 : 28; cx.fillStyle = '#000'; cx.fillRect(px + 16 - w / 2, py - (e.boss ? 22 : 6), w, 4); cx.fillStyle = e.boss ? '#f33' : '#e44'; cx.fillRect(px + 16 - w / 2, py - (e.boss ? 22 : 6), w * e.hp / e.mhp, 4); }
   if (P.target === e) { cx.strokeStyle = '#f44'; cx.strokeRect(px + 1, py + 1, 30, 30); }
 }
-let useCache = true;
+let useCache = true, lightScale = .25;
 function render() {
   const t0 = performance.now();
   const vw = cv.width, vh = cv.height;
@@ -1537,7 +1570,7 @@ function render() {
   const mw = W.w * TS, mh = W.h * TS;
   camX = mw <= vw ? (mw - vw) / 2 : Math.max(0, Math.min(mw - vw, camX)); camY = mh <= vh ? (mh - vh) / 2 : Math.max(0, Math.min(mh - vh, camY));
   camX = Math.round(camX); camY = Math.round(camY);
-  cx.fillStyle = '#000'; cx.fillRect(0, 0, vw, vh);
+  if (!useCache || mw < vw || mh < vh || camX < 0 || camY < 0) { cx.fillStyle = '#000'; cx.fillRect(0, 0, vw, vh); }
   const x0 = Math.floor(camX / TS) - 1, y0 = Math.floor(camY / TS) - 1, x1 = x0 + Math.ceil(vw / TS) + 2, y1 = y0 + Math.ceil(vh / TS) + 2;
   if (useCache) for (let cy2 = Math.max(0, Math.floor(y0 / CH)); cy2 <= Math.min(Math.floor((W.h - 1) / CH), Math.floor(y1 / CH)); cy2++) for (let cx2 = Math.max(0, Math.floor(x0 / CH)); cx2 <= Math.min(Math.floor((W.w - 1) / CH), Math.floor(x1 / CH)); cx2++) cx.drawImage(getChunk(cx2, cy2), cx2 * CH * TS - camX, cy2 * CH * TS - camY);
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -1578,7 +1611,7 @@ function render() {
   const dk = W.dark ? .93 : night * .6;
   if (dk > .02) {
     if (!render.lc) render.lc = document.createElement('canvas');
-    const lc = render.lc, l = lc.getContext('2d'); if (lc.width !== vw || lc.height !== vh) { lc.width = vw; lc.height = vh; }
+    const LS = lightScale, lw = Math.ceil(vw * LS), lh = Math.ceil(vh * LS); const lc = render.lc, l = lc.getContext('2d'); if (lc.width !== lw || lc.height !== lh) { lc.width = lw; lc.height = lh; } l.setTransform(LS, 0, 0, LS, 0, 0);
     const th = W.theme || THEMES[0], fg = W.dark ? th.fog : [10, 10, 40];
     l.globalCompositeOperation = 'source-over'; l.clearRect(0, 0, vw, vh); l.fillStyle = `rgba(${fg},${dk})`; l.fillRect(0, 0, vw, vh);
     l.globalCompositeOperation = 'destination-out';
@@ -1587,7 +1620,7 @@ function render() {
     for (const k in W.obj) if (BLOCKS[W.obj[k]].light) { const [x, y] = k.split(',').map(Number); lights.push([x * TS + 16, y * TS + 12, 120 + Math.sin(time * 9 + x) * 6, 1]); }
     for (const p of projs) if (p.kind !== 'arrow') lights.push([p.x, p.y, 60]);
     for (const [x, y, r] of lights) { const sx = x - camX, sy = y - camY; if (sx < -r || sy < -r || sx > vw + r || sy > vh + r) continue; const g = l.createRadialGradient(sx, sy, r * .2, sx, sy, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); l.fillStyle = g; l.beginPath(); l.arc(sx, sy, r, 0, 7); l.fill(); }
-    cx.drawImage(lc, 0, 0);
+    l.setTransform(1, 0, 0, 1, 0, 0); const sm = cx.imageSmoothingEnabled; cx.imageSmoothingEnabled = true; cx.drawImage(lc, 0, 0, lw, lh, 0, 0, vw, vh); cx.imageSmoothingEnabled = sm;
     cx.globalCompositeOperation = 'lighter';
     const tc = (W.theme || THEMES[0]).torch;
     for (const [x, y, r, warm] of lights) if (warm) { const sx = x - camX, sy = y - camY; if (sx < -r || sy < -r || sx > vw + r || sy > vh + r) continue; const g = cx.createRadialGradient(sx, sy, 0, sx, sy, r * .7); g.addColorStop(0, `rgba(${tc},.22)`); g.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = g; cx.fillRect(sx - r, sy - r, r * 2, r * 2); }
@@ -1627,6 +1660,7 @@ function drawMinimapTiles(s) {
   }
 }
 function hud() {
+  updateTut();
   const mh = maxHp(), mp = maxMp();
   $('hname').innerHTML = `<b style="color:#fc6">Aventurero Nv.${P.lvl}</b> · 💰 ${P.gold} · ${P.floor ? 'Piso ' + P.floor : P.field ? 'Llanuras' : 'Ciudad'} (máx ${P.maxFloor})` + (P.sp + P.kp ? ` · <span style="color:#7f7">¡Puntos libres!</span>` : '');
   $('hp').style.width = (100 * P.hp / mh) + '%'; $('hpt').textContent = `PV ${Math.ceil(P.hp)}/${mh}`;
@@ -1661,7 +1695,7 @@ function drawWorldMap() {
   drawWorldMap.drawn = (drawWorldMap.drawn || 0) + 1; return true;
 }
 function closePanel() { panel = null; $('panel').style.display = 'none'; $('tip').style.display = 'none'; }
-function openPanel(n, data) { panel = n; panel_data = data; snd('ui'); drawPanel(); $('panel').style.display = 'block'; }
+function openPanel(n, data) { if (P && P.tutF) { if (n === 'npc') tutFlag('npc'); if (n === 'inv') tutFlag('inv'); if (n === 'skills') tutFlag('skills'); if (n === 'keys') tutFlag('help'); if (n === 'craft') tutFlag('craft'); } panel = n; panel_data = data; snd('ui'); drawPanel(); $('panel').style.display = 'block'; }
 let panel_data = null;
 function itemHtml(it, act) { return `<div class="it r${it.rar}" data-act="${act}" data-uid="${it.uid}"><span style="font-size:18px">${SLOTS[it.slot]}</span><br><span class="c${it.rar}">${it.plus ? '+' + it.plus + ' ' : ''}${it.name.slice(0, 14)}</span></div>`; }
 function itemTip(it) { const cmp = P.eq[it.slot]; return `<b class="c${it.rar}">${it.plus ? '+' + it.plus + ' ' : ''}${it.name}</b>${it.plus ? ' <small>(+' + it.plus * 8 + '% estadísticas)</small>' : ''}<br><i>${RAR[it.rar]} · ${it.slot} · nv ${it.lvl}</i><br>` + Object.entries(it.st).map(([k, v]) => `+${v} ${STN[k]}` + (cmp && cmp !== it ? ` <span style="color:${v >= (cmp.st[k] || 0) ? '#7f7' : '#f77'}">(${cmp.st[k] || 0})</span>` : '')).join('<br>') + `<br><span style="color:#fd4">Valor: ${it.value} oro</span>`; }
@@ -1681,7 +1715,7 @@ function drawPanel() {
     h += `</div><div><h3>Mochila (${P.inv.length}/32) — clic: equipar · clic der.: vender/tirar</h3><div class="grid">${P.inv.map(it => itemHtml(it, 'equip')).join('')}</div></div></div>`;
   }
   if (panel === 'skills') {
-    h = close + `<h2>🌟 Falna — Árbol de habilidades (${P.kp} pts)</h2><div style="display:grid;grid-template-columns:repeat(3,200px);gap:10px">`;
+    h = close + `<h2>🌟 Sello divino — Árbol de habilidades (${P.kp} pts)</h2><div style="display:grid;grid-template-columns:repeat(3,200px);gap:10px">`;
     ['⚔ Guerrero', '🔥 Mago', '🛡 Supervivencia'].forEach(t => h += `<b style="text-align:center;color:#fc6">${t}</b>`);
     for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
       const id = Object.keys(SKILLS).find(k => SKILLS[k].row === r && SKILLS[k].col === c), s = SKILLS[id];
@@ -1691,35 +1725,43 @@ function drawPanel() {
     h += '</div>';
   }
   if (panel === 'craft') {
-    h = close + `<button style="float:right" data-act="openench">⚒ Mejorar equipo (Welf)</button><h2>🔨 Fabricación</h2><p>${Object.entries(P.mats).map(([k, v]) => `${MATS[k]} ${v}`).join(' · ')}</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">`;
+    h = close + `<button style="float:right" data-act="openench">⚒ Mejorar equipo (Brann)</button><h2>🔨 Fabricación</h2><p>${Object.entries(P.mats).map(([k, v]) => `${MATS[k]} ${v}`).join(' · ')}</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">`;
     RECIPES.forEach((r, i) => { const nm = r.name || (BLOCKS[r.id] ? BLOCKS[r.id].n : CONSUM[r.id].n), sts = recipeStations(r), stOk = sts.every(hasStation); if (r.id === 'cana' && P.cana) return; h += `<div style="background:#0005;padding:5px;border-radius:5px"><b>${nm}</b>${r.n ? ' x' + r.n : ''}<br><small>${Object.entries(r.in).map(([k, v]) => `<span style="color:${P.mats[k] >= v ? '#9f9' : '#f88'}">${MATS[k]}${v}</span>`).join(' ')}${sts.length ? '<br>' + sts.map(x => `<span style="color:${hasStation(x) ? '#9f9' : '#f88'}">⚒ ${STN_N[x]}</span>`).join(' ') : ''}</small><br><button data-act="craft" data-k="${i}" ${have(r.in) && stOk ? '' : 'disabled'}>Fabricar</button></div>`; });
     h += '</div>';
   }
+  if (panel === 'keys') {
+    const G = [['Movimiento y combate', [['WASD / Flechas', 'Moverse'], ['Espacio', 'Atacar / golpe'], ['E', 'Usar, hablar, recolectar, pescar'], ['1-4', 'Habilidades activas'], ['5 / 6', 'Poción de vida / maná'], ['7-0', 'Comida con buffs'], ['P', 'Habilidad de la mascota'], ['N', 'Montar / desmontar'], ['R / T / Y', 'Runas']]],
+      ['Hechizos', [['Enter', 'Escribir hechizo o mensaje (exura, exori…)'], ['F1-F4', 'Hechizos asignados']]],
+      ['Paneles', [['I', 'Inventario y estadísticas'], ['K', 'Árbol de habilidades (Sello)'], ['C', 'Fabricación'], ['J', 'Misiones e historia'], ['H', 'Tu casa'], ['L', 'Logros y títulos'], ['O', 'Opciones / guardar'], ['Tab', 'Mapa del mundo'], ['?', 'Esta ayuda'], ['Esc', 'Cerrar panel']]],
+      ['Construcción y otros', [['B', 'Modo construcción (ciudad)'], ['Clic', 'Colocar / quitar bloque, objetivo'], ['M', 'Música on/off']]],
+      ['Mando', [['Stick / cruceta', 'Mover'], ['A / X / Y', 'Usar / atacar / golpe'], ['LB / RB', 'Pociones'], ['Start', 'Inventario']]]];
+    h = close + `<h2>❓ Teclas y controles</h2><div class="keys">` + G.map(([t, l]) => `<div><h3>${t}</h3>${l.map(([k, d]) => `<div><kbd>${k}</kbd> ${d}</div>`).join('')}</div>`).join('') + `</div><p><small>En el móvil: cruz para moverte, ⚔ atacar, E usar, y la barra ☰ de arriba abre los paneles.</small> ${P.tut < TUT.length ? '' : '<button data-act="retut">Repetir tutorial</button>'}</p>`;
+  }
   if (panel === 'worldmap') {
     h = close + `<h2>🗺 Mapa del mundo — ${W.name}</h2><div style="display:flex;gap:14px;flex-wrap:wrap"><canvas id="wmc" width="560" height="400" style="background:#000;border:1px solid #666;image-rendering:pixelated"></canvas><div style="min-width:200px">
-      <h3>Rutas</h3><div style="line-height:1.9">🏘 <b>Ciudad de Orario</b> ${W === town ? '◀ aquí' : ''}<br>&nbsp;&nbsp;↕ letrero sur<br>🌾 <b>Llanuras de Orario</b> ${W === field ? '◀ aquí' : ''}<br>&nbsp;&nbsp;↕ torre del sur · torre del norte (ciudad)<br>🗼 <b>Calabozo</b>: pisos 1–${P.maxFloor} ${W.floor ? '◀ piso ' + W.floor : ''}<br>🏟 Coliseo ${W.isArena ? '◀ aquí' : ''}</div>
+      <h3>Rutas</h3><div style="line-height:1.9">🏘 <b>Ciudad de Valdoria</b> ${W === town ? '◀ aquí' : ''}<br>&nbsp;&nbsp;↕ letrero sur<br>🌾 <b>Llanuras de Valdoria</b> ${W === field ? '◀ aquí' : ''}<br>&nbsp;&nbsp;↕ torre del sur · torre del norte (ciudad)<br>🗼 <b>Calabozo</b>: pisos 1–${P.maxFloor} ${W.floor ? '◀ piso ' + W.floor : ''}<br>🏟 Coliseo ${W.isArena ? '◀ aquí' : ''}</div>
       <h3>Leyenda</h3><small>⬛ sin explorar (niebla) · ⬜ tú · 🟡 NPC · 🔴 enemigo · 🔵 compañero · 🟧 escaleras/salidas · 💰 cofre</small>
       <h3>Pisos explorados</h3><small>${[...Array(Math.min(P.maxFloor, 40))].map((_, i) => { const f = i + 1, th = theme(f); return `<span title="${th.n}" style="display:inline-block;width:14px;height:14px;margin:1px;background:${f % 5 === 0 ? '#b22' : th.wt};border:1px solid #000"></span>`; }).join('')}</small><br><small>Rojo = piso de jefe</small></div></div>`;
   }
   if (panel === 'enchant') {
-    h = close + `<h2>⚒ Forja de Welf — Mejora de equipo</h2><p>De +1 a +10 (+8% de estadísticas por nivel). Probabilidad: ${ENCH_CH.map((c, i) => '+' + (i + 1) + ':' + c + '%').join(' ')}${hearts('welf') >= 6 ? ' (+5% por amistad con Welf)' : ''}.<br>Riesgo: desde +5 un fallo baja un nivel; desde +8 un fallo puede <b style="color:#f44">destruir</b> el objeto.</p><p>📜 Pergaminos de protección: <b>${P.prot || 0}</b> <button data-act="buyprot" ${P.gold >= 400 ? '' : 'disabled'}>Comprar (400 oro)</button> <label><input type="checkbox" data-act="toggleprot" ${P.useProt ? 'checked' : ''}> Usar al fallar (desde +5: evita bajar o destruir; se consume)</label></p><p>💰 ${P.gold} · ⛓ ${P.mats.hierro} · 💎 ${P.mats.cristal} ${isOpen('smith') ? '' : '<b style="color:#f88">· La forja está cerrada</b>'}</p>`;
+    h = close + `<h2>⚒ Forja de Brann — Mejora de equipo</h2><p>De +1 a +10 (+8% de estadísticas por nivel). Probabilidad: ${ENCH_CH.map((c, i) => '+' + (i + 1) + ':' + c + '%').join(' ')}${hearts('brann') >= 6 ? ' (+5% por amistad con Brann)' : ''}.<br>Riesgo: desde +5 un fallo baja un nivel; desde +8 un fallo puede <b style="color:#f44">destruir</b> el objeto.</p><p>📜 Pergaminos de protección: <b>${P.prot || 0}</b> <button data-act="buyprot" ${P.gold >= 400 ? '' : 'disabled'}>Comprar (400 oro)</button> <label><input type="checkbox" data-act="toggleprot" ${P.useProt ? 'checked' : ''}> Usar al fallar (desde +5: evita bajar o destruir; se consume)</label></p><p>💰 ${P.gold} · ⛓ ${P.mats.hierro} · 💎 ${P.mats.cristal} ${isOpen('smith') ? '' : '<b style="color:#f88">· La forja está cerrada</b>'}</p>`;
     const list = [...Object.values(P.eq).filter(Boolean), ...P.inv];
     h += list.map(it => { const c = enchantCost(it), ok = (it.plus || 0) < 10 && P.gold >= c.oro && P.mats.hierro >= c.hierro && P.mats.cristal >= c.cristal && isOpen('smith'); return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">${itemHtml(it, 'none')}<div>${(it.plus || 0) >= 10 ? '<b style="color:#fd4">¡+10 MÁXIMO!</b>' : `→ +${(it.plus || 0) + 1} (${enchantChance(it)}%) · 💰${c.oro} ⛓${c.hierro}${c.cristal ? ' 💎' + c.cristal : ''} <button data-act="ench" data-uid="${it.uid}" ${ok ? '' : 'disabled'}>Mejorar</button>`}${Object.values(P.eq).includes(it) ? ' <small>(equipado)</small>' : ''}</div></div>`; }).join('');
   }
   if (panel === 'quests') {
     const S = storyNode();
-    let sh = `<h2>📖 Historia ${P.story.path ? '— Ruta ' + (P.story.path === 'hestia' ? 'Hestia' : 'Loki') : ''}</h2>`;
+    let sh = `<h2>📖 Historia ${P.story.path ? '— Ruta ' + (P.story.path === 'aurelia' ? 'Aurelia' : 'Varkas') : ''}</h2>`;
     if (S) { sh += `<p><b>${S.n}</b><br>${S.d} ${S.t !== 'none' ? `(${Math.min(P.story.p, S.c)}/${S.c})` : ''}</p>`; if (P.story.ready && S.ch) sh += `<p style="color:#fc8"><i>${typeof S.q === 'function' ? S.q() : S.q}</i></p>` + S.ch.map((c, i) => `<button data-act="story" data-k="${i}" style="display:block;margin:4px 0">${c.t}</button>`).join(''); }
     if (P.story.choices.length) sh += `<p><small>Tus decisiones: ${P.story.choices.length} · ${P.storyTitle ? 'Título de historia: «' + P.storyTitle + '»' : ''}</small></p>`;
     const q = QUESTS[P.q];
     h = close + sh + `<h2>📜 Gremio de Aventureros</h2>`;
-    if (!q) h += '<p>Eina: «¡Has completado todo! Eres una leyenda de Orario.»</p>';
-    else h += `<p><b>${q.n}</b><br>${q.d}<br>Progreso: ${Math.min(P.qp, q.c)}/${q.c}<br>Recompensa: ${q.xp} XP · ${q.g} oro</p>` + (P.qp >= q.c ? `<button data-act="turnin">Entregar misión</button>` : '<i>Eina: «¡Vuelve cuando lo hayas logrado!»</i>');
+    if (!q) h += '<p>Noa: «¡Has completado todo! Eres una leyenda de Valdoria.»</p>';
+    else h += `<p><b>${q.n}</b><br>${q.d}<br>Progreso: ${Math.min(P.qp, q.c)}/${q.c}<br>Recompensa: ${q.xp} XP · ${q.g} oro</p>` + (P.qp >= q.c ? `<button data-act="turnin">Entregar misión</button>` : '<i>Noa: «¡Vuelve cuando lo hayas logrado!»</i>');
     h += `<p style="color:#888">Misiones completadas: ${P.q}/${QUESTS.length}</p>`;
   }
   if (panel === 'shop') {
-    const disc = 1 - hearts('bors') * .03, pr = { pocion_vida: Math.round((15 + P.lvl * 2) * disc), pocion_mana: Math.round((20 + P.lvl * 2) * disc) };
-    h = close + `<h2>🏪 Tienda de Bors</h2><p>💰 ${P.gold}</p>`;
+    const disc = 1 - hearts('gaspar') * .03, pr = { pocion_vida: Math.round((15 + P.lvl * 2) * disc), pocion_mana: Math.round((20 + P.lvl * 2) * disc) };
+    h = close + `<h2>🏪 Tienda de Gaspar</h2><p>💰 ${P.gold}</p>`;
     for (const k in pr) h += `<button data-act="buy" data-k="${k}" data-p="${pr[k]}">Comprar ${CONSUM[k].n} (${pr[k]} oro)</button>`;
     h += '<br>'; for (const c in CROPS) h += `<button data-act="seed" data-k="${c}">3 semillas de ${CROPS[c].n} (${CROPS[c].price} oro)</button>`; h += `<button data-act="sellcrops">Vender cosechas</button><br>`;
     for (const m of ['madera', 'piedra', 'hierro', 'hierba']) h += `<button data-act="buymat" data-k="${m}">Comprar 5 ${m} (${m === 'hierro' ? 40 : 15} oro)</button>`;
@@ -1738,7 +1780,7 @@ function drawPanel() {
     const l = P.house || 1, nx = HOUSE[l + 1];
     h = close + `<h2>🏠 Tu hogar: ${HOUSE[l].n} (nivel ${l})</h2><p>Confort actual: <b>${comfort()}</b> (multiplicador x${HOUSE[l].mult || 1}). El confort acelera tu regeneración en la ciudad.</p>`;
     if (nx) { const ok = P.gold >= nx.cost.oro && Object.entries(nx.cost).every(([k, v]) => k === 'oro' || P.mats[k] >= v); h += `<p>Mejorar a <b>${nx.n}</b>: parcela ${nx.w}x${nx.h}, confort x${nx.mult}.<br>Coste: ${Object.entries(nx.cost).map(([k, v]) => `<span style="color:${(k === 'oro' ? P.gold : P.mats[k]) >= v ? '#9f9' : '#f88'}">${k === 'oro' ? '💰' : MATS[k]} ${v}</span>`).join(' ')}</p><button data-act="upgrade" ${ok ? '' : 'disabled'}>Mejorar casa</button>`; }
-    else h += '<p>¡Tienes la mejor casa de Orario!</p>';
+    else h += '<p>¡Tienes la mejor casa de Valdoria!</p>';
   }
   if (panel === 'npc') {
     const n = panel_data, F = FRIENDS[n.id], hs = hearts(n.id);
@@ -1764,7 +1806,7 @@ function drawPanel() {
       <h3>Una ronda para todos</h3><button data-act="round" ${P.gold >= 50 ? '' : 'disabled'}>Invitar una ronda (50 oro): +5 amistad con quien esté aquí</button>`;
   }
   if (panel === 'arena') {
-    h = close + `<h2>🏟 Coliseo de Orario</h2><p>Lucha contra oleadas cada vez más fuertes, con un campeón cada 5 oleadas. Si mueres aquí no pierdes oro. Sal por la puerta sur cuando quieras.</p><p>Récord: oleada ${P.arenaBest || 0} · Fichas: 🎟 ${P.tokens || 0} · Horario 10:00–23:00 (${clock()})</p>
+    h = close + `<h2>🏟 Coliseo de Valdoria</h2><p>Lucha contra oleadas cada vez más fuertes, con un campeón cada 5 oleadas. Si mueres aquí no pierdes oro. Sal por la puerta sur cuando quieras.</p><p>Récord: oleada ${P.arenaBest || 0} · Fichas: 🎟 ${P.tokens || 0} · Horario 10:00–23:00 (${clock()})</p>
       <button data-act="arenago" ${isOpen('arena') ? '' : 'disabled'}>⚔ Entrar a la arena</button>
       <h3>🏆 Torneo semanal (cada 7 días · hoy es día ${P.day})</h3>${tourneyDay() ? (P.tourneyWeek === week() ? '<p>Ya participaste esta semana.</p>' : `<button data-act="tourney" ${isOpen('arena') ? '' : 'disabled'}>Inscribirse al torneo</button>`) : `<p>Próximo torneo: día ${P.day + (7 - P.day % 7)}.</p>`}
       <p><small>Rivales de esta semana: ${rivals().map(r => r.n + ' (' + r.s + ')').join(' · ')} · Premios: 🥇100 🥈50 🥉25 fichas</small></p>${P.lastTourney ? `<p><small>Último torneo: puesto ${P.lastTourney.pos} (${P.lastTourney.table.join(', ')})</small></p>` : ''}<h3>Tienda de fichas</h3>
@@ -1775,7 +1817,7 @@ function drawPanel() {
     h += `<p><button data-act="delixir" ${P.gold >= 150 + P.floor * 20 ? '' : 'disabled'}>Elixir completo (+3 pociones de vida y maná) — ${150 + P.floor * 20} oro</button></p>`;
   }
   if (panel === 'bank') {
-    h = close + `<h2>🏦 Banco de Orario</h2><p>Lo que guardas en el banco no se pierde al morir. Interés: 1% diario (máx. 500).</p><p>En mano: 💰 ${P.gold} · En el banco: 🏦 ${P.bank}</p>`;
+    h = close + `<h2>🏦 Banco de Valdoria</h2><p>Lo que guardas en el banco no se pierde al morir. Interés: 1% diario (máx. 500).</p><p>En mano: 💰 ${P.gold} · En el banco: 🏦 ${P.bank}</p>`;
     for (const v of [100, 1000]) h += `<button data-act="dep" data-k="${v}">Depositar ${v}</button>`; h += `<button data-act="dep" data-k="all">Depositar todo</button><br>`;
     for (const v of [100, 1000]) h += `<button data-act="wd" data-k="${v}">Retirar ${v}</button>`; h += `<button data-act="wd" data-k="all">Retirar todo</button>`;
   }
@@ -1790,13 +1832,13 @@ function drawPanel() {
       <button data-act="tbless" ${P.blessed || P.gold < 50 * P.lvl ? 'disabled' : ''}>Bendición: la próxima muerte no cuesta oro — ${50 * P.lvl} oro</button>${P.blessed ? '<p style="color:#ff9">✨ Estás bendecido.</p>' : ''}`;
   }
   if (panel === 'stable') {
-    h = close + `<h2>🐴 Establo de Ryu</h2><p>💰 ${P.gold}</p><h3>Mascotas (te acompañan y luchan)</h3>`;
+    h = close + `<h2>🐴 Establo de Tadeo</h2><p>💰 ${P.gold}</p><h3>Mascotas (te acompañan y luchan)</h3>`;
     for (const k in PETS) { const D = PETS[k], own = P.pets.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<small>[${petName(k)} · ${petData(k).xp}/${petNeed(petData(k).lvl)} XP]</small> <button data-act="setpet" data-k="${k}">${P.pet === k ? '✔ Activa' : 'Llevar'}</button>` : `<button data-act="buypet" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
     h += `<button data-act="setpet" data-k="">Dejar mascota en casa</button><h3>Monturas (N para montar)</h3>`;
     for (const k in MOUNTS) { const D = MOUNTS[k], own = P.mounts.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<button data-act="setmount" data-k="${k}">${P.mount === k ? '✔ Activa' : 'Usar'}</button>` : `<button data-act="buymount" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
   }
   if (panel === 'recruit') {
-    h = close + `<h2>⚔ Reclutas del Gremio</h2><p>Forma un grupo como en Grimgar (máx. ${MAX_PARTY} aliados). Suben de nivel contigo. 💰 ${P.gold}</p>`;
+    h = close + `<h2>⚔ Reclutas del Gremio</h2><p>Forma un grupo de aventureros (máx. ${MAX_PARTY} aliados). Suben de nivel contigo. 💰 ${P.gold}</p>`;
     h += P.guildHall ? `<p>🏰 <b>Sede del Gremio</b>: confort ${guildComfort()} → aliados +${Math.round(guildBonus() * 100)}% vida/daño. <button data-act="allyrest">${P.allyRest !== false ? 'Aliados: descansan en la sede (en la ciudad)' : 'Aliados: te siguen en la ciudad'}</button></p>` : `<p><button data-act="buyguild" ${P.gold >= 3000 ? '' : 'disabled'}>🏰 Comprar Sede del Gremio (3000 oro)</button> <small>Vivienda compartida con tus aliados: descansan, se curan, reviven solos y la decoración les da bonus.</small></p>`;
     for (const k in ALLIES) { if (ALLIES[k].story && !P.storyUnlock?.[k]) continue; const D = ALLIES[k], inp = P.party.find(a => a.id === k), cost = D.price + P.lvl * 20; h += `<div style="margin:4px 0"><b style="color:${D.col === '#333' ? '#aaa' : D.col}">${D.n}</b> — ${D.cls} ${D.healer ? '(cura)' : D.taunt ? '(tanque)' : D.range > 1 ? '(distancia)' : '(cuerpo a cuerpo)'} ${inp ? `<button data-act="dismiss" data-k="${k}">Despedir</button> ${inp.down ? '💀' : '❤ ' + inp.hp + '/' + allyMaxHp(k)}` : `<button data-act="hire" data-k="${k}" ${P.party.length < MAX_PARTY && P.gold >= cost ? '' : 'disabled'}>Reclutar ${cost}💰</button>`}</div>`; }
   }
@@ -1814,7 +1856,7 @@ function drawPanel() {
     <h3>Hechizos (Enter para escribir · F1-F4 atajos)</h3>${[0, 1, 2, 3].map(i => `F${i + 1}: <input id="bind${i}" value="${P.binds[i] || ''}" style="width:160px">`).join(' ')} <button data-act="binds">Guardar atajos</button><p><small>${Object.entries(SPELLS).map(([w, S]) => `<b>${w}</b> (${S.n}, nv ${S.lvl}, ${S.mp} MP)`).join(' · ')}</small></p><h3>Mando</h3><p>Stick/cruceta: mover · A atacar · B usar/cerrar · X bola de fuego · Y golpe · LB/RB pociones · LT/RT torbellino/curar · Select habilidades · Start inventario</p>`;
   }
   if (panel === 'death') {
-    h = `<h2 style="color:#f44">💀 Has caído</h2><p>Derrotado por <b>${panel_data.src}</b>.<br>Hestia te rescató y te llevó a la ciudad. Perdiste ${panel_data.lost} de oro.</p><p>Nivel ${P.lvl} · Piso máximo ${P.maxFloor} · Monstruos: ${P.kills}<br>Récord de piso: ${localStorage.getItem('cc_record') || P.maxFloor}</p><button data-act="close">Levantarse</button>`;
+    h = `<h2 style="color:#f44">💀 Has caído</h2><p>Derrotado por <b>${panel_data.src}</b>.<br>Aurelia te rescató y te llevó a la ciudad. Perdiste ${panel_data.lost} de oro.</p><p>Nivel ${P.lvl} · Piso máximo ${P.maxFloor} · Monstruos: ${P.kills}<br>Récord de piso: ${localStorage.getItem('cc_record') || P.maxFloor}</p><button data-act="close">Levantarse</button>`;
   }
   el.innerHTML = h;
   if (panel === 'worldmap') drawWorldMap();
@@ -1859,6 +1901,7 @@ function panelAct(a, d) {
   if (a === 'mcancel') { const l = P.market[+d.k]; if (l && P.inv.length < 32) { P.market.splice(+d.k, 1); P.inv.push(l.item); } }
   if (a === 'mcollect') { P.gold += P.marketGold || 0; log('Cobraste ' + (P.marketGold || 0) + ' oro de tus subastas.', '#fd4'); P.marketGold = 0; snd('pick'); }
   if (a === 'mbuy') { const it2 = P.mktStock[+d.k]; if (it2 && P.gold >= it2.price && P.inv.length < 32) { P.gold -= it2.price; P.mktStock.splice(+d.k, 1); P.inv.push(it2); snd('pick'); } }
+  if (a === 'retut') { P.tut = 0; P.tutF = {}; P.steps = 0; closePanel(); return; }
   if (a === 'buyprot') buyProt();
   if (a === 'toggleprot') P.useProt = !P.useProt;
   if (a === 'openench') { openPanel('enchant'); return; }
@@ -1867,7 +1910,7 @@ function panelAct(a, d) {
   if (a === 'allyrest') { P.allyRest = P.allyRest === false; buildComps(); }
   if (a === 'story') { storyChoose(+d.k); }
   if (a === 'tbuy' && P.gold >= +d.p) { P.gold -= +d.p; P.cons[d.k]++; snd('pick'); }
-  if (a === 'rumor' && P.gold >= 5) { P.gold -= 5; P.lastRumor = pick(['«El mercader errante aparece siempre en los pisos 2, 5, 8…»', '«Bors paga bien el pescado… y Welf adora el hierro.»', '«Con lluvia pican más los peces dorados.»', '«En el Coliseo hay torneo cada 7 días. ¡El campeón gana 100 fichas!»', '«Si escribes adori vita vis con una runa en blanco… boom.»', '«Las mascotas evolucionan a nivel 10.»', '«En la Casa de Subastas, si pides demasiado, nadie compra.»']); }
+  if (a === 'rumor' && P.gold >= 5) { P.gold -= 5; P.lastRumor = pick(['«El mercader errante aparece siempre en los pisos 2, 5, 8…»', '«Gaspar paga bien el pescado… y Brann adora el hierro.»', '«Con lluvia pican más los peces dorados.»', '«En el Coliseo hay torneo cada 7 días. ¡El campeón gana 100 fichas!»', '«Si escribes adori vita vis con una runa en blanco… boom.»', '«Las mascotas evolucionan a nivel 10.»', '«En la Casa de Subastas, si pides demasiado, nadie compra.»']); }
   if (a === 'round' && P.gold >= 50) { P.gold -= 50; town.npcs.filter(n => n.state === 'tavern' && n.id).forEach(n => addFriend(n.id, 5)); log('🍻 ¡Invitas una ronda! Todos brindan por ti.', '#fc8'); snd('lvl'); }
   if (a === 'arenago') { startArena(); return; }
   if (a === 'tourney') { startArena(true); return; }
@@ -1883,6 +1926,7 @@ function panelAct(a, d) {
   if (a === 'buyequip') { const c = 60 + P.maxFloor * 25; if (P.gold >= c && P.inv.length < 32) { P.gold -= c; const n = genItem(null, P.maxFloor); P.inv.push(n); log('Compraste ' + n.name, '#9cf'); } }
   if (a === 'craft') {
     const r = RECIPES[+d.k]; if (!have(r.in)) return; if (!recipeStations(r).every(hasStation)) { log('Necesitas en tu casa: ' + recipeStations(r).map(x => STN_N[x]).join(', '), '#f88'); return; }
+    if (r.id === 'pergamino_prot') { if (!recipeStations(r).every(hasStation)) { log('Necesitas Mesa de alquimia y Yunque en tu casa.', '#f88'); drawPanel(); return; } if (!Object.entries(r.in).every(([k, v]) => P.mats[k] >= v)) { log('Faltan materiales.', '#f88'); return; } for (const k in r.in) P.mats[k] -= r.in[k]; P.prot = (P.prot || 0) + 1; P.crafted++; tutFlag('craft'); log('📜 Fabricaste un Pergamino de protección (' + P.prot + ').', '#9cf'); snd('build'); drawPanel(); return; }
     if (r.id === 'runa_blanca') { for (const k in r.in) P.mats[k] -= r.in[k]; P.runes.blank = (P.runes.blank || 0) + 2; P.crafted++; log('Fabricaste 2 runas en blanco. Escribe «adori gran», «adori vita vis» o «adura vita».', '#c9f'); drawPanel(); return; }
     if (r.id === 'cana') { for (const k in r.in) P.mats[k] -= r.in[k]; P.cana = 1; P.crafted++; log('¡Fabricaste una caña de pescar! Mira al agua y pulsa E.', '#6af'); drawPanel(); return; }
     if (r.id.startsWith('gear:') && P.inv.length >= 32) return log('Inventario lleno.', '#f88');
@@ -1907,8 +1951,24 @@ function save() {
     localStorage.setItem('cc_save', JSON.stringify({ v: 5, P: { ...P, target: null, trail: [], say: null, ...(W && W.isArena ? { x: 34, y: 16 } : {}) }, obj: town.obj, crops: town.crops, uid }));
   } catch (e) { }
 }
+// ---------- Migración de partidas antiguas (nombres del mundo anterior) ----------
+const OLD_IDS = { hestia: 'aurelia', loki: 'varkas', eina: 'noa', welf: 'brann', bors: 'gaspar', mogzo: 'bruno', merry: 'selene', yume: 'tala', shihoru: 'iris', ranta: 'corvo', lili: 'pipa', wiene: 'ysra', xenos: 'hablantes', hestia1: 'aurelia1', loki1: 'varkas1' };
+const OLD_TXT = [['Orario', 'Valdoria'], ['Hestia', 'Aurelia'], ['Loki', 'Varkas'], ['Familia', 'Casa'], ['Falna', 'Sello'], ['Crozzo', 'Ascua']];
+function migrateSave(s) {
+  const p = s && s.P; if (!p || p.ipv >= 1) return s;
+  const id = k => OLD_IDS[k] || k, rk = o => { if (!o || typeof o !== 'object') return o; const n = {}; for (const k in o) n[id(k)] = o[k]; return n; };
+  const tx = v => typeof v === 'string' ? OLD_TXT.reduce((a, [x, y]) => a.split(x).join(y), v) : v;
+  for (const f of ['friend', 'talked', 'gifted', 'allyQ', 'storyUnlock', 'friendRew']) if (p[f]) p[f] = rk(p[f]);
+  if (Array.isArray(p.party)) p.party.forEach(a => a.id = id(a.id));
+  if (p.story) { p.story.node = id(p.story.node); p.story.path = id(p.story.path); p.story.choices = (p.story.choices || []).map(c => { const [n, i] = String(c).split(':'); return id(n) + ':' + i; }); }
+  p.title = tx(p.title); p.storyTitle = tx(p.storyTitle);
+  for (const it of [...(p.inv || []), ...Object.values(p.eq || {}), ...(p.depot || [])]) if (it && it.name) it.name = tx(it.name);
+  if (p['wiene' + 'Sold']) p.allySold = 1; // OLD_IDS
+  p.ipv = 1; return s;
+}
 function load() {
   const s = JSON.parse(localStorage.getItem('cc_save') || 'null'); if (!s) return false;
+  migrateSave(s); if (s.P.tut == null) { s.P.tut = 99; } s.P.tutF = s.P.tutF || {};
   const d = newPlayer(); P = Object.assign(d, s.P); P.mats = Object.assign(newPlayer().mats, s.P.mats); P.cons = Object.assign(newPlayer().cons, s.P.cons); P.buffs = P.buffs || {}; P.runes = Object.assign({ blank: 0, gfb: 0, sd: 0, uh: 0 }, s.P.runes); P.fieldSeen = s.P.fieldSeen || ''; P.story = Object.assign({ node: 'inicio', p: 0, ready: 0, choices: [], path: null }, s.P.story); P.perks = P.perks || {}; P.storyUnlock = P.storyUnlock || {}; P.target = null; P.cds = {}; uid = s.uid || 1000; visitors = [];
   for (const k in SKILLS) P.sk[k] = P.sk[k] || 0;
   town = genTown(); town.obj = s.obj || {}; if (P.guildHall) paintGuild(town); town.crops = s.crops || {};
@@ -1932,8 +1992,8 @@ function newGame(cls = 'guerrero') {
   for (const k in C.st) P.base[k] += C.st[k]; P.sk[C.sk] = 1; P.hp = maxHp(); P.mp = maxMp();
   P.eq.arma = genItem('arma', 1, 0, C.w); P.mats.semilla_trigo = 3; P.blocks.cultivo = 2;
   log('Has elegido la clase ' + C.n + '.', '#fc6');
-  log('¡Bienvenido a Orario, aventurero!', '#fc6');
-  log('Habla con Eina (E) en el gremio para recibir misiones. El calabozo está en la torre al norte.', '#9cf');
+  log('¡Bienvenido a Valdoria, aventurero!', '#fc6');
+  log('Habla con Noa (E) en el gremio para recibir misiones. El calabozo está en la torre al norte.', '#9cf');
   log('Tu parcela de casa está al este: tala, mina, fabrica (C) y construye (B).', '#9cf');
   save();
 }
@@ -1955,4 +2015,4 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 // API de pruebas
-window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, genItem, buyProt, reveal, explored, packFog, updateTraps, getChunk, perf, get useCache() { return useCache; }, set useCache(v) { useCache = v; }, render: () => render(), drawMinimap: () => drawMinimap(), enchant, enchantCost, enchantChance, stat, openChest, stepEvents, checkHouse, drawWorldMap, buyGuildHall, guildComfort, guildBonus, GUILD, storyEvent, storyChoose, storyNode, STORY, useRune, RUNES, petAbility, PETAB, startArenaT: () => startArena(true), finishTourney, rivals, week, tourneyDay, listItem, marketTick, marketChance, updateMarket, updateNPCs, settleNPCs, npcGoal, questReward, xpNeed, castSpell, SPELLS, hour, clock, isOpen, nightLevel, startArena, nextWave, updateArena, get arena() { return arena; }, petGainXp, petData, petMult, petName, allyQuestEvent, allyMult, AQUEST, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };
+window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, genItem, TUT, tutStep, tutFlag, skipTut, updateTut, migrateSave, get lightScale() { return lightScale; }, set lightScale(v) { lightScale = v; }, buyProt, reveal, explored, packFog, updateTraps, getChunk, perf, get useCache() { return useCache; }, set useCache(v) { useCache = v; }, render: () => render(), drawMinimap: () => drawMinimap(), enchant, enchantCost, enchantChance, stat, openChest, stepEvents, checkHouse, drawWorldMap, buyGuildHall, guildComfort, guildBonus, GUILD, storyEvent, storyChoose, storyNode, STORY, useRune, RUNES, petAbility, PETAB, startArenaT: () => startArena(true), finishTourney, rivals, week, tourneyDay, listItem, marketTick, marketChance, updateMarket, updateNPCs, settleNPCs, npcGoal, questReward, xpNeed, castSpell, SPELLS, hour, clock, isOpen, nightLevel, startArena, nextWave, updateArena, get arena() { return arena; }, petGainXp, petData, petMult, petName, allyQuestEvent, allyMult, AQUEST, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };
