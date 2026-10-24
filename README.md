@@ -107,3 +107,10 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Balance de inicio**: empiezas con 100 de oro, 5 pociones de vida, 2 de maná y 2 panes. La curva de XP es más suave y los monstruos dan más XP y oro, con más botín en los primeros pisos. Las primeras 4 misiones dan premios (kit de construcción, arma de tu clase, cama con antorchas y armadura rara). En ~30 combates y 4 misiones se llega a nivel 6 o más.
 - **Arreglo**: los textos flotantes ya no pasan de un mapa a otro.
 - Las pruebas suben a **72** (`python3 tests/smoke_test.py`).
+
+## Novedades (iteración 8)
+- **Mejora de equipo (+1..+10)** en la forja de Welf (botón «⚒ Mejorar equipo» en Fabricación). Cada + da +8 % a las estadísticas. Probabilidad de 100 % a 20 %. Un fallo por debajo de +5 solo gasta materiales; desde +5 baja un nivel; desde +8 tiene un 25 % de **destruir** el objeto. Cuesta oro, hierro y cristal. Welf con 6+ corazones da +5 %.
+- **Eventos del calabozo**: trampas de pinchos o alarma (la agilidad ayuda a esquivarlas y detectarlas), salas del tesoro con cofres (¡cuidado con los mímicos!) y casas de monstruos (desde el piso 4) con gran recompensa al limpiarlas.
+- **Mapa del mundo (Tab)**: mapa completo de la zona actual con NPCs, enemigos, compañeros, cofres, tu casa y la sede, más rutas y pisos explorados.
+- **Sede del Gremio** (3000 oro, con Bárbara): vivienda compartida con tus aliados. En la ciudad descansan ahí, se curan y reviven solos; la decoración (confort) les da hasta +30 % de vida y daño.
+- **Historia ramificada** (panel J): ruta Hestia (+10 % XP, Lili como aliada o recompensa del Gremio) o ruta Loki (+10 % daño, título o arma legendaria), final contra el Minotauro del piso 10 con títulos distintos.

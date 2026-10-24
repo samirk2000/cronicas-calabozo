@@ -373,6 +373,48 @@ with sync_playwright() as p:
     check('morir en torneo cuenta el puntaje sin perder oro', r['score']==1 and r['pos']>=4 and r['gold']==100, r)
     G("g.P.dayT=140; g.settleNPCs(); g.enterTown([22,21]);"); time.sleep(.6); pg.screenshot(path=ROOT + '/tests/shot_tavern.png'); G("g.P.dayT=40; g.settleNPCs()")
 
+    # Iteración 8: mejora, eventos, mapa, sede, historia
+    r = G("""const P=g.P; P.dayT=40; g.settleNPCs&&g.settleNPCs(); const it=g.genItem('arma',5,1); P.inv.push(it); P.gold=1e6; P.mats.hierro=999; P.mats.cristal=999;
+      const a0=g.stat('atk'); const o1=g.enchant(it.uid,0); const a1=it.plus; for(let i=0;i<6;i++) g.enchant(it.uid,0);
+      const p7=it.plus; it.plus=5; const fd=g.enchant(it.uid,99); const pd=it.plus; it.plus=7; const it2=g.genItem('arma',5,1); it2.plus=8; P.inv.push(it2); const fx=g.enchant(it2.uid,99.9);
+      const it3=g.genItem('casco',5,1); it3.plus=2; P.inv.push(it3); const f3=g.enchant(it3.uid,99); P.eq.arma=it; const a2=g.stat('atk');
+      const it4=g.genItem('arma',5,1); it4.plus=10; P.inv.push(it4); const mx=g.enchant(it4.uid,0);
+      return {o1,a1,p7,fd,pd,fx,gone:!P.inv.includes(it2),f3,p3:it3.plus||0,mx,cost:g.enchantCost(it).oro>0}""")
+    check('mejora +1..+10: éxito, fallo seguro <+5, baja desde +5, destrucción desde +8, máximo +10', r['o1']=='ok' and r['a1']==1 and r['p7']==7 and r['fd']=='down' and r['pd']==4 and r['fx']=='destroyed' and r['gone'] and r['f3']=='fail' and r['p3']==2 and r['mx']=='max', r)
+    r = G("""const P=g.P; P.dayT=40; P.gold=1e6; const it=g.genItem('arma',5,1); it.st={atk:20}; P.eq.arma=it; const a=g.stat('atk'); it.plus=5; const b=g.stat('atk'); P.dayT=DAYLEN_ ; return {a,b}""".replace('P.dayT=DAYLEN_ ;',''))
+    check('cada + suma 8% de estadísticas', r['b']>r['a'], r)
+    r = G("""const P=g.P; P.hp=P.mhp=1e6; g.enterFloor(6); const W=g.W; const k=[P.x+1,P.y]; W.traps.add((P.x+1)+','+P.y); P.base.agi=0; const hp0=P.hp; const ex=P.x; P.x+=1; g.stepEvents(); return {seen:W.seenTraps.has(k.join(',')), gone:!W.traps.has(k.join(',')), hit:P.trapsHit}""")
+    check('trampas se activan y quedan visibles', r['seen'] and r['gone'] and r['hit']>=1, r)
+    r = G("""const P=g.P; g.enterFloor(6); const W=g.W; W.chests={}; const x=P.x+1,y=P.y; W.t[y*W.w+x]=17; W.chests[x+','+y]={mimic:false}; const g0=P.gold, c0=P.chestsOpened||0; const a=g.openChest(x,y);
+      W.t[y*W.w+x]=17; W.chests[x+','+y]={mimic:true}; const n0=g.ents.length; const b=g.openChest(x,y); return {a,b,gold:P.gold>g0||P.inv.length>0, mim:g.ents.length>n0 && g.ents.some(e=>e.n==='Mímico')}""")
+    check('cofres del tesoro dan botín; algunos son mímicos', r['a']=='loot' and r['b']=='mimic' and r['mim'], r)
+    r = G("""const P=g.P; let found=0; for(let f=3;f<40&&!found;f++){ if(f%5==0) continue; g.enterFloor(f); if(g.W.events.includes('tesoro')&&[...Object.keys(g.W.chests||{})].length) found=f; } let house=0; for(let f=3;f<60&&!house;f++){ if(f%5==0) continue; g.enterFloor(f); if(g.W.house) house=f; }
+      const H=g.W.house; P.x=H.r.cx; P.y=H.r.cy; g.stepEvents(); const n=H.ids.length, st1=H.state; for(const e of H.ids){ const i=g.ents.indexOf(e); if(i>=0) g.ents.splice(i,1);} const d0=g.drops.length; g.checkHouse(); return {found,house,n,st1,st2:H.state,drops:g.drops.length-d0, cnt:P.houses}""")
+    check('salas del tesoro y casas de monstruos se generan; limpiar la casa da recompensa', r['found']>0 and r['house']>0 and r['n']>=6 and r['st1']==1 and r['st2']==2 and r['drops']>=3, r)
+    G("g.enterTown(); g.closePanel()"); pg.keyboard.press('Tab'); time.sleep(.3)
+    r = G("""const c=document.getElementById('wmc'); const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; let col=new Set(); for(let i=0;i<d.length;i+=997*4) col.add(d[i]+','+d[i+1]+','+d[i+2]); return {panel:g.panel, colors:col.size, drawn:g.drawWorldMap.drawn}""")
+    pg.screenshot(path=ROOT + '/tests/shot_worldmap.png')
+    check('Tab abre el mapa del mundo dibujado', r['panel']=='worldmap' and r['colors']>4, r)
+    pg.keyboard.press('Tab'); time.sleep(.1)
+    r = G("""const p=g.panel; g.enterFloor(3); g.openPanel('worldmap'); const ok=g.drawWorldMap(); g.closePanel(); return {p,ok}""")
+    check('Tab cierra el mapa; también funciona en el calabozo', r['p'] in (None,'',False) and r['ok'], r)
+    r = G("""const P=g.P; g.enterTown(); P.party=[{id:'mogzo',hp:10,down:1},{id:'ranta',hp:10,down:0}]; P.gold=100; const no=g.buyGuildHall(); P.gold=5000; const yes=g.buyGuildHall(); g.buildComps(); const G0=g.GUILD;
+      const rest=g.comps.filter(c=>c.kind==='ally').every(c=>c.rest && c.x>=G0.x && c.x<G0.x+G0.w); const b0=g.guildBonus(); g.town.obj[(G0.x+1)+','+(G0.y)]='sofa'; g.town.obj[(G0.x+7)+','+(G0.y)]='chimenea'; const b1=g.guildBonus();
+      for(let i=0;i<40;i++) g.updateComps(1); const rev=!P.party[0].down; const pr=P.party.find(a=>a.id==='ranta');
+      g.save(); g.load(); g.enterTown(); return {no,yes,rest,b0,b1,rev,hall:g.P.guildHall, obj:!!g.town.obj[(G0.x+1)+','+(G0.y)]}""")
+    check('sede del gremio: compra, aliados viven ahí, se curan/reviven, decoración da bonus, persiste', (not r['no']) and r['yes'] and r['rest'] and r['b1']>r['b0'] and r['rev'] and r['hall']==1 and r['obj'], r)
+    r = G("""const P=g.P; P.story={node:'inicio',p:0,ready:0,choices:[],path:null}; P.perks={}; g.storyEvent('floor',2); const rdy=P.story.ready; const s0=JSON.stringify(P.story);
+      const save=JSON.stringify({story:P.story}); g.storyChoose(0); const A={path:P.story.path, node:P.story.node, xp:P.perks.xp};
+      P.party=[]; P.field=1; for(let i=0;i<15;i++) g.storyEvent('fieldkill',1); g.storyChoose(0); const lili=P.party.some(a=>a.id==='lili') && P.storyUnlock.lili;
+      g.storyEvent('boss10',1); const gold0=P.gold; g.storyChoose(0); const fin=P.story.node, gt=P.gold-gold0, t=P.storyTitle;
+      P.story={node:'inicio',p:0,ready:0,choices:[],path:null}; P.perks={}; P.storyTitle=''; P.maxFloor=10; g.storyEvent('floor',2); g.storyChoose(1); const B={path:P.story.path,node:P.story.node,dmg:P.perks.dmg, ready:P.story.ready};
+      const n0=P.inv.length; g.storyChoose(1); const leg=P.inv.length>n0 && P.inv[P.inv.length-1].rar===4;
+      g.openPanel('quests'); const html=document.getElementById('panel').innerHTML; g.closePanel(); return {rdy,A,lili,fin,gt,t,B,leg,rival:P.lokiRival, html:html.includes('Historia')}""")
+    check('historia ramificada: ruta Hestia (Lili aliada) y ruta Loki (arma legendaria), final con título', r['rdy'] and r['A']['path']=='hestia' and r['A']['node']=='hestia1' and r['lili'] and r['fin']=='fin' and r['gt']==2000 and r['t']=='Leyenda de Orario' and r['B']['path']=='loki' and r['B']['ready']==1 and r['leg'] and r['rival']==1 and r['html'], r)
+    r = G("""g.save(); g.load(); const P=g.P; return {node:P.story.node, ch:P.story.choices.length, dmg:P.perks.dmg}""")
+    check('historia y ventajas persisten al guardar/cargar', r['node']=='final' and r['ch']==2 and r['dmg']==0.1, r)
+    G("g.P.party=[]; g.enterTown(); g.closePanel()")
+
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
     for k in ['i', 'k', 'c', 'j', 'h']:
