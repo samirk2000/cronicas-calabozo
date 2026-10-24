@@ -347,12 +347,12 @@ with sync_playwright() as p:
     check('subastas: comisión, precio alto vende menos, cobrar y comprar ofertas', r['fee']==56 and r['ca']>r['cb']*5 and r['soldA']>=0 and r['mg']>=120 and r['collected'] and r['stock']==4 and r['bought'], r)
 
     # 34 Runas
-    r = G("""const P=g.P; P.lvl=20; P.mp=9999; P.cds={}; P.runes={blank:0,gfb:0,sd:0,uh:0}; const noBlank=g.castSpell('adori gran');
+    r = G("""const _rnd=Math.random; let _sd=12345; Math.random=()=>((_sd=(_sd*16807)%2147483647)-1)/2147483646; try{ const P=g.P; P.lvl=20; P.mp=9999; P.cds={}; P.runes={blank:0,gfb:0,sd:0,uh:0}; const noBlank=g.castSpell('adori gran');
       Object.assign(P.mats,{piedra:20,cristal:10}); g.enterTown(); P.blocks.alquimia=1; g.setBuild(g.BLOCKIDS().indexOf('alquimia')); g.placeBlock(30,13); const ri=g.RECIPES.findIndex(r=>r.id==='runa_blanca'); g.panelAct('craft',{k:String(ri)}); g.closePanel(); const blanks=P.runes.blank;
       P.cds={}; const r1=g.castSpell('adori gran'); P.cds={}; const r2=g.castSpell('adori vita vis'); P.mp=9999; P.cds={};
       g.enterFloor(1); g.ents.length=0; let pos=null; for(const [ox,oy] of [[2,0],[-2,0],[0,2],[0,-2]]) if(!g.solidAt(P.x+ox,P.y+oy,true)&&g.los(P.x,P.y,P.x+ox,P.y+oy)){pos=[P.x+ox,P.y+oy];break}
-      if(!pos) return {skip:1}; const e=g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false); e.hp=e.mhp=99999; e.spd=99;e.mcd=99;e.cd=99; const h0=e.hp; const u1=g.useRune('gfb'); const h1=e.hp; P.cds={}; const u2=g.useRune('sd'); const h2=e.hp; P.cds={}; const u3=g.useRune('sd');
-      g.ents.length=0; return {noBlank, blanks, r1, r2, u1, gfb:h1<h0, u2, sd:(h1-h2)>(h0-h1), u3};""")
+      if(!pos) return {skip:1}; const e=g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false); e.hp=e.mhp=99999; e.spd=99;e.mcd=99;e.cd=99; Math.random=()=>0.99; const h0=e.hp; const u1=g.useRune('gfb'); const h1=e.hp; P.cds={}; const u2=g.useRune('sd'); const h2=e.hp; P.cds={}; const u3=g.useRune('sd');
+      g.ents.length=0; return {noBlank, blanks, r1, r2, u1, gfb:h1<h0, u2, sd:(h1-h2)>(h0-h1), u3}; } finally { Math.random=_rnd; }""")
     check('runas: requieren runa en blanco, se crean con palabras y se usan (R/T)', r.get('skip') or (r['noBlank']=='blank' and r['blanks']==2 and r['r1']=='rune' and r['r2']=='rune' and r['u1']=='used' and r['gfb'] and r['u2']=='used' and r['sd'] and r['u3']=='none'), r)
 
     # 35 Habilidades de mascota (P)
@@ -410,9 +410,42 @@ with sync_playwright() as p:
       P.story={node:'inicio',p:0,ready:0,choices:[],path:null}; P.perks={}; P.storyTitle=''; P.maxFloor=10; g.storyEvent('floor',2); g.storyChoose(1); const B={path:P.story.path,node:P.story.node,dmg:P.perks.dmg, ready:P.story.ready};
       const n0=P.inv.length; g.storyChoose(1); const leg=P.inv.length>n0 && P.inv[P.inv.length-1].rar===4;
       g.openPanel('quests'); const html=document.getElementById('panel').innerHTML; g.closePanel(); return {rdy,A,lili,fin,gt,t,B,leg,rival:P.lokiRival, html:html.includes('Historia')}""")
-    check('historia ramificada: ruta Hestia (Lili aliada) y ruta Loki (arma legendaria), final con título', r['rdy'] and r['A']['path']=='hestia' and r['A']['node']=='hestia1' and r['lili'] and r['fin']=='fin' and r['gt']==2000 and r['t']=='Leyenda de Orario' and r['B']['path']=='loki' and r['B']['ready']==1 and r['leg'] and r['rival']==1 and r['html'], r)
+    check('historia ramificada: ruta Hestia (Lili aliada) y ruta Loki (arma legendaria), final con título', r['rdy'] and r['A']['path']=='hestia' and r['A']['node']=='hestia1' and r['lili'] and r['fin']=='xenos' and r['gt']==2000 and r['t']=='Leyenda de Orario' and r['B']['path']=='loki' and r['B']['ready']==1 and r['leg'] and r['rival']==1 and r['html'], r)
     r = G("""g.save(); g.load(); const P=g.P; return {node:P.story.node, ch:P.story.choices.length, dmg:P.perks.dmg}""")
     check('historia y ventajas persisten al guardar/cargar', r['node']=='final' and r['ch']==2 and r['dmg']==0.1, r)
+    G("g.P.party=[]; g.enterTown(); g.closePanel()")
+
+    # Iteración 9
+    r = G("""const P=g.P; P.dayT=40; P.gold=1e6; P.mats.hierro=999; P.mats.cristal=999; P.prot=0; const b=g.buyProt(); const it=g.genItem('arma',5,1); it.plus=9; P.inv.push(it);
+      const a=g.enchant(it.uid,99.9,true); const pa=it.plus, pr=P.prot; const c=g.enchant(it.uid,99.9,true); const gone=!P.inv.includes(it);
+      const it2=g.genItem('arma',5,1); it2.plus=2; P.inv.push(it2); P.prot=1; const d=g.enchant(it2.uid,99,true); g.openPanel('enchant'); const html=document.getElementById('panel').innerHTML; g.closePanel();
+      return {b,a,pa,pr,c,gone,d,keep:P.prot,html:html.includes('Pergaminos de protección')}""")
+    check('pergamino de protección evita destrucción/bajada y se consume; sin pergamino se destruye', r['b'] and r['a']=='protected' and r['pa']==9 and r['pr']==0 and r['c']=='destroyed' and r['gone'] and r['d']=='fail' and r['keep']==1 and r['html'], r)
+    r = G("""const P=g.P; P.story={node:'xenos',p:0,ready:0,choices:[],path:'hestia'}; P.perks={}; P.party=[]; P.maxFloor=1; g.storyEvent('floor',15); const r1=P.story.ready; g.storyChoose(0); const w=P.party.some(a=>a.id==='wiene')&&P.storyUnlock.wiene;
+      g.storyEvent('boss10',1); const no=P.story.ready; g.storyEvent('boss20',1); g.openPanel('quests'); const q=document.getElementById('panel').innerHTML.includes('Dix'); g.closePanel(); g.storyChoose(0); const dmg=P.perks.dmg;
+      g.storyEvent('boss30',1); const kp=P.kp; g.storyChoose(0); const A={node:P.story.node,t:P.storyTitle,kp:P.kp-kp};
+      P.story={node:'loki1',p:0,ready:0,choices:[],path:'loki'}; P.perks={}; P.maxFloor=16; g.storyEvent('floor',8); g.storyChoose(0); g.storyEvent('boss10',1); g.storyChoose(0); const auto=P.story.ready; const g0=P.gold; g.storyChoose(1); const gold=P.gold-g0;
+      g.storyEvent('boss20',1); g.storyChoose(1); const xp=P.perks.xp; g.storyEvent('boss30',1); const n0=P.inv.length; g.storyChoose(1);
+      return {r1,w,no,q,dmg,A,auto,gold,xp,leg:P.inv.length-n0, t2:P.storyTitle, node:P.story.node}""")
+    check('capítulos 4–6 (pisos 15/20/30): Wiene aliada o venderla, Dix, Dragón Negro con finales distintos', r['r1']==1 and r['w'] and not r['no'] and r['q'] and r['dmg']==0.15 and r['A']['node']=='fin' and r['A']['t']=='Héroe de Orario' and r['A']['kp']==10 and r['auto']==1 and r['gold']==3000 and r['xp']==0.2 and r['leg']==2 and r['t2']=='Matadragones', r)
+    r = G("""const P=g.P; P.party=[]; P.hp=P.mhp=1e6; let F=0; for(let f=2;f<60&&!F;f++){ if(f%5==0) continue; g.enterFloor(f); if(g.W.arrowTraps.length&&g.W.saws.length) F=f; } const W=g.W; const a=W.arrowTraps[0];
+      g.ents.length=0; P.x=a.x; P.y=a.y+3; P.fx=P.x; P.fy=P.y; a.cd=0; const n0=g.projs.length; g.updateTraps(0.01); const fired=g.projs.length>n0 && !!g.projs[g.projs.length-1].hostile; P.x=a.x+1; a.cd=0; const n1=g.projs.length; g.updateTraps(0.01); const notAligned=g.projs.length===n1;
+      const w=W.saws[0]; P.x=Math.round(w.x0+(w.x1-w.x0)/2); P.y=w.y; P.fx=P.x; P.fy=P.y; const xs=new Set(); const h0=P.sawHits||0; for(let i=0;i<200;i++){ g.updateTraps(0.05); xs.add(Math.round(w.fx)); }
+      g.projs.length=0; return {F,fired,notAligned,moved:xs.size>=3,hit:(P.sawHits||0)>h0}""")
+    check('trampas de flechas disparan en línea y sierras móviles patrullan y cortan', r['F']>0 and r['fired'] and r['notAligned'] and r['moved'] and r['hit'], r)
+    r = G("""const P=g.P; g.enterFloor(7); const e0=g.explored(); const W=g.W; const far=W.rooms[W.rooms.length-1]; const hid=!W.seen[far.cy*W.w+far.cx] || Math.hypot(far.cx-P.x,far.cy-P.y)<7; P.x=far.cx; P.y=far.cy; const n=g.reveal(); const e1=g.explored();
+      g.openPanel('worldmap'); const html=document.getElementById('panel').innerHTML; g.closePanel();
+      g.enterField(); const f0=g.explored(); g.P.x+=10; g.reveal(); const f1=g.explored(); g.save(); g.load(); g.enterField(); const f2=g.explored(); g.enterTown(); return {e0,hid,n,e1,html:html.includes('niebla'),f0,f1,f2}""")
+    check('niebla de guerra: se revela al explorar, mapa/minimapa ocultan lo no visto, Llanuras persisten', r['e0']<0.5 and r['hid'] and r['n']>0 and r['e1']>r['e0'] and r['html'] and r['f1']>r['f0'] and r['f2']>=r['f1']*0.99, r)
+    r = G("""const P=g.P; g.enterFloor(25); const b=g.perf.chunksBuilt; g.render(); g.render(); const b2=g.perf.chunksBuilt; for(let i=0;i<5;i++) g.render(); const b3=g.perf.chunksBuilt;
+      let t=performance.now(); for(let i=0;i<60;i++) g.render(); const cached=(performance.now()-t)/60; g.useCache=false; t=performance.now(); for(let i=0;i<60;i++) g.render(); const raw=(performance.now()-t)/60; g.useCache=true;
+      g.enterField(); t=performance.now(); for(let i=0;i<60;i++){ g.render(); g.drawMinimap(); } const field=(performance.now()-t)/60; g.enterTown(); t=performance.now(); for(let i=0;i<60;i++){ g.render(); g.drawMinimap(); } const town=(performance.now()-t)/60;
+      return {built:b2-b, reuse:b3===b2, cached:+cached.toFixed(2), raw:+raw.toFixed(2), field:+field.toFixed(2), town:+town.toFixed(2)}""")
+    print('   rendimiento (ms/frame):', r)
+    check('caché de tiles: chunks se reutilizan y el render es rápido (<12 ms/frame en mapas grandes)', r['built']>0 and r['reuse'] and r['cached']<=r['raw']*1.1 and r['field']<12 and r['town']<12, r)
+    r = G("""g.enterFloor(3); const M=g.W; g.render(); const P=g.P; const x=P.x+1, y=P.y; const id=((y>>4)*1000)+(x>>4); const was=!!M._cc[id]; const other=Object.keys(M._cc).map(Number).filter(i=>i!==id);
+      M.t[y*M.w+x]=17; M.chests={}; M.chests[x+','+y]={mimic:false}; const v0=M._ver||0; g.openChest(x,y); return {was, inv:!M._cc[id], others:other.every(i=>!!M._cc[i]), ver:(M._ver||0)>v0}""")
+    check('modificar un tile invalida solo su chunk', r['was'] and r['inv'] and r['others'] and r['ver'], r)
     G("g.P.party=[]; g.enterTown(); g.closePanel()")
 
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render

@@ -114,3 +114,10 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Mapa del mundo (Tab)**: mapa completo de la zona actual con NPCs, enemigos, compañeros, cofres, tu casa y la sede, más rutas y pisos explorados.
 - **Sede del Gremio** (3000 oro, con Bárbara): vivienda compartida con tus aliados. En la ciudad descansan ahí, se curan y reviven solos; la decoración (confort) les da hasta +30 % de vida y daño.
 - **Historia ramificada** (panel J): ruta Hestia (+10 % XP, Lili como aliada o recompensa del Gremio) o ruta Loki (+10 % daño, título o arma legendaria), final contra el Minotauro del piso 10 con títulos distintos.
+
+## Novedades (iteración 9)
+- **Pergaminos de protección** (400 oro, en la forja de Welf): si está activada la casilla, un fallo desde +5 no baja ni destruye el objeto; se consume el pergamino.
+- **Historia ampliada**: capítulo 4 «La Xenos» (piso 15: proteger a Wiene, que se une como aliada, o venderla), capítulo 5 «La traición» (jefe del piso 20, decidir el destino de Dix) y capítulo 6 «El Dragón Negro» (jefe del piso 30, final «Héroe de Orario» o «Matadragones»).
+- **Trampas nuevas**: ballestas en las paredes que disparan flechas cuando te pones en su línea, y sierras móviles que patrullan las salas.
+- **Niebla de guerra**: el minimapa y el mapa del mundo (Tab) solo muestran lo explorado en el calabozo y en las Llanuras (se guarda el progreso de las Llanuras). El mapa indica el % explorado.
+- **Rendimiento**: los tiles estáticos se pintan por bloques de 16×16 en canvas fuera de pantalla y se reutilizan (solo se repinta el bloque que cambia); el minimapa también se guarda en caché.
