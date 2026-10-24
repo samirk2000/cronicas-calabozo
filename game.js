@@ -33,7 +33,7 @@ const MUS = {
 const music = { on: localStorage.getItem('cc_music') !== '0', track: null, step: 0, next: 0, gain: null };
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 function tone(f, t, d, wave, v) { const o = AC.createOscillator(), g = AC.createGain(); o.type = wave; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .02); g.gain.exponentialRampToValueAtTime(.0005, t + d); o.connect(g); g.connect(music.gain); o.start(t); o.stop(t + d + .05); }
-function musicTrack() { if (!W || !P) return null; if (ents.some(e => e.boss && e.aggro)) return 'boss'; return W.dark ? 'dungeon' : 'town'; }
+function musicTrack() { if (!W || !P) return null; if (W.isArena && arena && arena.active) return 'boss'; if (ents.some(e => e.boss && e.aggro)) return 'boss'; return W.dark ? 'dungeon' : 'town'; }
 function musicTick() {
   if (!AC || !music.on) return;
   if (!music.gain) { music.gain = AC.createGain(); music.gain.gain.value = .06; music.gain.connect(AC.destination); }
@@ -64,6 +64,11 @@ const SEASONS = [{ n: 'Primavera', ico: '🌸', grass: '#3f8a3a', tuft: '#4f9f48
   { n: 'Invierno', ico: '❄', grass: '#c8d2da', tuft: '#e8eef2', tree: '#3a5a4a', w: ['despejado', 'nieve', 'nieve'] }];
 const WEATHER_N = { despejado: '☀ Despejado', lluvia: '🌧 Lluvia', tormenta: '⛈ Tormenta', nieve: '🌨 Nieve' };
 const DAYLEN = 240;
+const hour = () => ((P.dayT / DAYLEN) * 24 + 6) % 24;
+const clock = () => { const h = hour(); return String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); };
+const HOURS = { shop: [8, 20], smith: [8, 19], bank: [9, 18], stable: [7, 20], recruit: [8, 22], quest: [8, 21], arena: [10, 23] };
+const isOpen = role => { const h = HOURS[role]; if (!h) return true; const x = hour(); return x >= h[0] && x < h[1]; };
+function nightLevel() { const x = hour(); if (x >= 7 && x < 18) return 0; if (x >= 21 || x < 4) return 1; if (x >= 18) return (x - 18) / 3; return (7 - x) / 3; }
 let weather = { type: 'despejado', t: 60, flash: 0 };
 const season = () => SEASONS[Math.floor(((P ? P.day : 1) - 1) / 7) % 4];
 function setWeather(type, t = rnd(60, 120)) { weather.type = type; weather.t = t; if (P) log('Clima: ' + WEATHER_N[type], '#9cf'); }
@@ -157,7 +162,7 @@ const CONSUM = { pocion_vida: { n: 'Poción de vida', ico: '❤' }, pocion_mana:
   tarta: { n: 'Tarta de fresa', ico: '🍰', buff: 'sabiduria', dur: 240, food: 1 }, banquete: { n: 'Banquete del héroe', ico: '🍱', buff: 'vigor', dur: 300, food: 1 } };
 const MATS = { madera: '🪵', piedra: '🪨', hierro: '⛓', hierba: '🌿', cristal: '💎', trigo: '🌾', zanahoria: '🥕', fresa: '🍓', semilla_trigo: '·🌾', semilla_zanahoria: '·🥕', semilla_fresa: '·🍓', pescado: '🐟', pez_dorado: '🐠' };
 const CROPS = { trigo: { n: 'Trigo', t: 20, col: '#eec850', price: 10 }, zanahoria: { n: 'Zanahoria', t: 30, col: '#f80', price: 15 }, fresa: { n: 'Fresa', t: 45, col: '#e23', price: 25 } };
-const BUFFN = { fuerza: '💪 Fuerza +25%', defensa: '🛡 Defensa +30%', sabiduria: '📖 XP +40%', vigor: '❤ Regeneración x3' };
+const BUFFN = { prisa: '💨 Prisa (utani hur)', escudo: '🔵 Escudo mágico (utamo vita)', luz: '💡 Luz (utevo lux)', fuerza: '💪 Fuerza +25%', defensa: '🛡 Defensa +30%', sabiduria: '📖 XP +40%', vigor: '❤ Regeneración x3' };
 
 // ---------- Objetos / rareza ----------
 const RAR = ['Común', 'Poco común', 'Raro', 'Épico', 'Legendario'];
@@ -248,7 +253,7 @@ function newPlayer() {
     base: { fue: 5, vit: 5, agi: 5, int: 5 }, sp: 0, kp: 0, sk: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 0])),
     inv: [], mats: Object.fromEntries(Object.keys(MATS).map(k => [k, 0])), cons: { pocion_vida: 3, pocion_mana: 1, pan: 0, estofado: 0, tarta: 0, banquete: 0 }, buffs: {}, cls: 'guerrero', gifts: 0, blocks: {},
     eq: { arma: null, armadura: null, casco: null, anillo: null }, cds: {}, atkCd: 0, maxFloor: 1, floor: 0,
-    q: 0, qp: 0, house: 1, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 0, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
+    q: 0, qp: 0, house: 1, binds: ['exura', 'exori', 'utani hur', 'exevo gran mas vis'], tokens: 0, arenaBest: 0, petLv: {}, allyQ: {}, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 20, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
   };
 }
 function stat(k) { let v = P.base[k] || 0; for (const s in P.eq) if (P.eq[s]) v += P.eq[s].st[k] || 0; return v; }
@@ -257,7 +262,7 @@ function maxMp() { return 20 + stat('int') * 6 + P.sk.arcano * 15; }
 function atk() { return Math.round((5 + stat('fue') * 2 + stat('atk') + P.lvl) * (1 + P.sk.maestria * .08 + (P.riding && P.mount ? MOUNTS[P.mount].atk || 0 : 0)) * (P.buffs.fuerza > 0 ? 1.25 : 1)); }
 function def() { return Math.round((stat('def') + Math.floor(stat('vit') / 2) + P.sk.piel * 3) * (P.buffs.defensa > 0 ? 1.3 : 1)); }
 function crit() { return 5 + stat('agi') * .6 + stat('crit') + (P.cls === 'arquero' ? 8 : 0); }
-function moveTime() { return Math.max(.07, (.22 - stat('agi') * .003) * (P.riding && P.mount ? MOUNTS[P.mount].spd : 1)); }
+function moveTime() { return Math.max(.07, (.22 - stat('agi') * .003) * (P.riding && P.mount ? MOUNTS[P.mount].spd : 1) * (P.buffs && P.buffs.prisa > 0 ? .7 : 1)); }
 function atkTime() { return Math.max(.35, 1 - stat('agi') * .015); }
 function xpNeed(l) { return Math.round(50 * Math.pow(l, 1.6)); }
 
@@ -295,11 +300,12 @@ function genTown() {
     { x: 11, y: 11, n: 'Templo (Sacerdotisa)', col: '#eee', role: 'temple' },
     { x: 27, y: 20, n: 'Ryu (Establo)', col: '#3a8', role: 'stable' },
     { x: 16, y: 5, n: 'Bárbara (Reclutas)', col: '#c4c', role: 'recruit' },
+    { x: 34, y: 17, n: 'Coliseo (Arena)', col: '#c33', role: 'arena' },
   ];
   const bld = (x0, y0, w, h, col) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) st(m, x, y, T.WALL); m.roofs.push([x0, y0, w, h, col]); };
   m.roofs = [];
   for (let y = 3; y < 15; y++) for (let x = 8; x < 16; x++) if (gt(m, x, y) !== T.PATH) st(m, x, y, T.GRASS);
-  bld(9, 3, 3, 2, '#2a6'); bld(13, 3, 3, 2, '#865'); bld(9, 9, 5, 2, '#ddd'); bld(26, 18, 4, 2, '#a63');
+  bld(9, 3, 3, 2, '#2a6'); bld(13, 3, 3, 2, '#865'); bld(9, 9, 5, 2, '#ddd'); bld(26, 18, 4, 2, '#a63'); bld(32, 18, 5, 3, '#a33'); st(m, 34, 16, T.PATH);
   for (let x = 9; x < 17; x++) st(m, x, 6, T.PATH); for (let y = 6; y < 15; y++) st(m, 15, y, T.PATH); for (let x = 11; x < 15; x++) st(m, x, 12, T.PATH);
   for (let y = 16; y < 21; y++) st(m, 28, y, T.PATH);
   m.light = 1; return m;
@@ -453,12 +459,47 @@ function updateField(dt) {
   if (W !== field) return;
   field.spawnT -= dt; if (field.spawnT <= 0) { field.spawnT = 8; if (ents.length < FIELD_MAX) spawnFieldMob(); }
 }
+// ---------- Arena ----------
+let arena = null;
+function genArena() {
+  const m = makeMap(17, 15, T.WALL); m.name = 'Coliseo de Orario'; m.npcs = []; m.isArena = 1; m.regrow = [];
+  for (let y = 1; y < 14; y++) for (let x = 1; x < 16; x++) st(m, x, y, T.SAND);
+  for (const [x, y] of [[4, 4], [12, 4], [4, 10], [12, 10]]) st(m, x, y, T.ROCK);
+  st(m, 8, 14, T.EXIT); m.torches = new Set(['3,0', '8,0', '13,0']); return m;
+}
+function startArena() {
+  if (!isOpen('arena')) return false;
+  arena = { wave: 0, active: false, wait: 3, gold: 0, tokens: 0, champs: 0 };
+  W = genArena(); ents = []; drops = []; projs = []; warns = []; P.floor = 0; P.field = 0; fishing = null; closePanel();
+  P.x = 8; P.y = 12; P.fx = 8; P.fy = 12; P.mt = 0; buildComps(); log('⚔ ¡Bienvenido al Coliseo! Sobrevive a las oleadas. Sal por la puerta sur para cobrar.', '#fc6'); snd('boss'); return true;
+}
+function nextWave() {
+  arena.wave++; arena.active = true; const w = arena.wave, lvl = Math.max(1, Math.round(P.lvl * .5 + w * .8)), n = Math.min(14, 2 + w);
+  for (let i = 0; i < n; i++) for (let k = 0; k < 30; k++) { const x = ri(1, 15), y = ri(1, 13); if (gt(W, x, y) !== T.SAND || solidAt(x, y) || Math.abs(x - P.x) + Math.abs(y - P.y) < 5) continue; const e = spawnEnemy(pick(EN.slice(0, Math.min(EN.length, 3 + Math.floor(w / 2)))), x, y, lvl, false); e.aggro = true; e.aggroR = 30; break; }
+  if (w % 5 === 0) { for (let k = 0; k < 30; k++) { const x = ri(2, 14), y = ri(1, 4); if (solidAt(x, y)) continue; const e = spawnEnemy(pick(EN.slice(5)), x, y, lvl + 2, false); e.mhp = e.hp = e.mhp * 6; e.n = 'Campeón ' + e.n; e.champion = 1; e.col = '#f44'; e.aggro = true; e.aggroR = 30; break; } }
+  log('🔔 ¡Oleada ' + w + '!' + (w % 5 === 0 ? ' Aparece un CAMPEÓN.' : ''), '#f84'); snd('boss'); shake = 6;
+}
+function waveReward() {
+  const w = arena.wave, g = Math.round(15 * w + 5 * Math.pow(w, 1.3)), t = 1 + Math.floor(w / 5) * 2;
+  P.gold += g; P.tokens = (P.tokens || 0) + t; arena.gold += g; arena.tokens += t; P.arenaBest = Math.max(P.arenaBest || 0, w);
+  log('✅ Oleada ' + w + ' superada: +' + g + ' oro, +' + t + ' fichas de arena.', '#9f9');
+  if (w % 5 === 0) { const it = genItem(null, Math.max(P.lvl, w), w >= 15 ? 4 : 3); if (P.inv.length < 32) { P.inv.push(it); log('🏆 Premio de campeón: ' + it.name + ' [' + RAR[it.rar] + ']', '#fd4'); } }
+  gainXp(10 * w);
+}
+function updateArena(dt) {
+  if (!arena || !W.isArena) return;
+  if (arena.active) { if (!ents.length) { arena.active = false; waveReward(); arena.wait = 4; } return; }
+  arena.wait -= dt; if (arena.wait <= 0) nextWave();
+}
+function endArena() { const a = arena; arena = null; if (a) log('🏟 Sales del Coliseo. Récord: oleada ' + (P.arenaBest || 0) + '. Ganaste ' + a.gold + ' oro y ' + a.tokens + ' fichas.', '#fc6'); enterTown([34, 16]); }
 function checkExit() {
+  if (W.isArena && gt(W, P.x, P.y) === T.EXIT) { endArena(); P.mt = 0; return; }
   if (gt(W, P.x, P.y) !== T.EXIT) return;
   if (W === town) enterField(); else if (W === field) enterTown([20, 32]);
   P.mt = 0;
 }
 function enterTown(at) {
+  arena = null;
   P.field = 0; fishing = null; 
   W = town; ents = []; drops = []; projs = []; warns = []; P.floor = 0;
   [P.x, P.y] = at || [20, 6]; P.fx = P.x; P.fy = P.y; buildComps(); log('Has vuelto a ' + W.name + '.', '#9cf'); save();
@@ -466,7 +507,7 @@ function enterTown(at) {
 function enterFloor(f) {
   P.floor = f; P.field = 0; fishing = null; W = genFloor(f); drops = []; projs = []; warns = [];
   [P.x, P.y] = W.start; P.fx = P.x; P.fy = P.y; buildComps();
-  if (f > P.maxFloor) P.maxFloor = f;
+  if (f > P.maxFloor) P.maxFloor = f; allyQuestEvent('floor', null, f);
   questEvent('floor', null, f);
   log('Entras al piso ' + f + (W.boss ? ' — ¡Se siente una presencia terrible!' : '.'), W.boss ? '#f66' : '#fc6');
   if (W.boss) { snd('boss'); shake = 12; }
@@ -478,13 +519,15 @@ const keys = {};
 addEventListener('keydown', e => {
   if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   const k = e.key.toLowerCase(); if (paused && k !== 'escape') { return; }
-  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'tab'].includes(k)) e.preventDefault();
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'tab', 'f1', 'f2', 'f3', 'f4', 'enter'].includes(k)) e.preventDefault();
   keys[k] = true; onKey(k);
 });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 function onKey(k) {
   if (k === 'escape') { if (fishing) { fishing = null; return; } if (panel) closePanel(); else if (buildMode) { buildMode = false; } return; }
-  if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'n') return toggleMount(); if (k === 'm') return toggleMusic();
+  if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'n') return toggleMount();
+  if (k === 'enter') { openChat(); return; }
+  if (/^f[1-4]$/.test(k)) { castSpell(P.binds[+k[1] - 1]); return; } if (k === 'm') return toggleMusic();
   if (panel) return;
   if (fishing) { if (k === 'e' || k === 'escape') { fishing = null; log('Recoges la caña.', '#aaa'); } return; }
   if (k === 'b') { if (W !== town) return log('Solo puedes construir en la ciudad.', '#f88'); buildMode = !buildMode; log(buildMode ? 'Modo construcción: Espacio coloca, X quita, Q/R cambia bloque.' : 'Modo construcción desactivado.', '#fc6'); return; }
@@ -540,6 +583,7 @@ function interact() {
   if (npc) return talk(npc);
   const o = W.obj[fx + ',' + fy];
   if (o === 'cultivo' && W === town) return farm(fx, fy);
+  if (o === 'cama' && (hour() >= 20 || hour() < 6)) { if (hour() >= 20) { P.day++; } P.dayT = 0; P.hp = maxHp(); P.mp = maxMp(); log('Duermes toda la noche… Amanece el día ' + P.day + ' (06:00).', '#fe8'); snd('heal'); save(); return 'slept'; }
   if (o === 'cama') { P.hp = maxHp(); P.mp = maxMp(); save(); log('Duermes en tu cama. PV/MP restaurados y partida guardada.', '#9f9'); snd('heal'); return; }
   if (o === 'cofre') return openPanel('chest');
   if (here === T.DOWN || t === T.DOWN) { if (!W.floor) return openPanel('floors'); return enterFloor(P.floor + 1); }
@@ -610,9 +654,10 @@ function toggleMount() {
 }
 function talk(n) {
   if (n.id && !talk.direct) { openPanel('npc', n); return; }
+  if (!isOpen(n.role)) { const h = HOURS[n.role]; log(n.n + ': «Está cerrado. Abrimos de ' + h[0] + ':00 a ' + h[1] + ':00.» (son las ' + clock() + ')', '#aaa'); return 'closed'; }
   snd('ui');
   if (n.role === 'dmerch') return openPanel('dmerch');
-  if (['bank', 'depot', 'temple', 'stable', 'recruit'].includes(n.role)) return openPanel(n.role);
+  if (['bank', 'depot', 'temple', 'stable', 'recruit', 'arena'].includes(n.role)) return openPanel(n.role);
   if (n.role === 'quest') return openPanel('quests');
   if (n.role === 'shop') return openPanel('shop');
   if (n.role === 'smith') return openPanel('craft');
@@ -715,8 +760,8 @@ function damageEnemy(e, dmg, color) {
 }
 function killEnemy(e) {
   ents = ents.filter(x => x !== e); snd('die'); burst(e.fx * TS + 16, e.fy * TS + 16, e.col, 25); shake = e.boss ? 20 : 4;
-  gainXp(e.xp); P.kills++; questEvent('kill', null, 1);
-  const g = Math.round((ri(1, 4) + e.lvl * 2) * (1 + P.sk.fortuna * .15 + (P.pet === 'gato' ? .25 : 0)) * (e.boss ? 10 : 1));
+  gainXp(e.xp); P.kills++; questEvent('kill', null, 1); petGainXp(e.xp * .35); allyQuestEvent('kill', null, 1); allyQuestEvent('killName', e.n.replace(/^★ | dorado$/g, ''), 1, e.rare ? 'rare' : null); if (e.boss) allyQuestEvent('boss', null, 1); if (e.champion && arena) arena.champs = (arena.champs || 0) + 1;
+  const g = Math.round((ri(1, 4) + e.lvl * 2) * (1 + P.sk.fortuna * .15 + (P.pet === 'gato' ? (petData('gato').lvl >= 10 ? .5 : .25) : 0)) * (e.boss ? 10 : 1));
   drops.push({ x: e.x, y: e.y, gold: g });
   if (e.boss || e.rare || Math.random() < .18) drops.push({ x: e.x, y: e.y, item: genItem(null, e.lvl, e.boss ? ri(2, 4) : e.rare ? ri(3, 4) : null) });
   if (e.rare) { P.rares++; log('¡Derrotaste a un monstruo raro: ' + e.n + '!', '#fd4'); for (let i = 0; i < 3; i++) drops.push({ x: e.x, y: e.y, gold: g }); }
@@ -790,12 +835,13 @@ function questEvent(type, key, n) {
 function hurtPlayer(d, src) {
   d = Math.max(1, Math.round(d * rnd(.85, 1.15) - def() * .5));
   if (fishing) { fishing = null; log('¡Te atacaron! Pierdes el pez.', '#f88'); }
+  if (P.buffs.escudo > 0 && P.mp > 0) { const m = Math.min(P.mp, d); P.mp -= m; d -= m; addText(P.fx * TS + 22, P.fy * TS, '-' + Math.round(m), '#69f', 13); }
   P.hp -= d; P.flash = .2; shake = Math.max(shake, 5); snd('hurt');
   addText(P.fx * TS + 16, P.fy * TS, '-' + d, '#f55', 16);
   if (P.hp <= 0) die(src);
 }
 function die(src) {
-  P.deaths++; const lost = P.blessed ? 0 : Math.floor(P.gold * .1); P.gold -= lost; if (P.blessed) { P.blessed = 0; log('✨ La bendición del templo te protegió: no pierdes oro.', '#ff9'); }
+  P.deaths++; const lost = (P.blessed || (W && W.isArena)) ? 0 : Math.floor(P.gold * .1); P.gold -= lost; if (P.blessed) { P.blessed = 0; log('✨ La bendición del templo te protegió: no pierdes oro.', '#ff9'); }
   log('Has caído ante ' + src + '. Pierdes ' + lost + ' de oro.', '#f44');
   P.hp = maxHp(); P.mp = maxMp(); enterTown([20, 7]); openPanel('death', { src, lost });
 }
@@ -851,8 +897,36 @@ const ALLIES = {
   ranta: { n: 'Ranta', cls: 'Caballero Oscuro', col: '#333', hp: 1.6, dmg: 1.2, range: 1, price: 250 },
 };
 const MAX_PARTY = 2;
+const EVO = { perro: { n: 'Cerbero', col: '#622' }, gato: { n: 'Nekomata', col: '#c5f' }, halcon: { n: 'Grifo', col: '#db6' }, slime: { n: 'Rey Slime', col: '#3cf' } };
+function petData(id = P.pet) { P.petLv = P.petLv || {}; return P.petLv[id] || (P.petLv[id] = { lvl: 1, xp: 0 }); }
+const petNeed = l => Math.round(40 * Math.pow(l, 1.5));
+const petName = id => (petData(id).lvl >= 10 ? EVO[id].n : PETS[id].n) + ' Nv' + petData(id).lvl;
+function petGainXp(n) {
+  if (!P.pet) return; const d = petData(); if (d.lvl >= 30) return; d.xp += Math.max(1, Math.round(n));
+  while (d.xp >= petNeed(d.lvl) && d.lvl < 30) { d.xp -= petNeed(d.lvl); d.lvl++; log('🐾 ' + PETS[P.pet].n + ' sube a nivel ' + d.lvl + '.', '#9cf');
+    if (d.lvl === 10) { log('✨ ¡' + PETS[P.pet].n + ' evolucionó a ' + EVO[P.pet].n + '!', '#fd4'); snd('lvl'); const c = comps.find(c => c.kind === 'pet'); if (c) { ring(c.fx * TS + 16, c.fy * TS + 16, '#fd4'); burst(c.fx * TS + 16, c.fy * TS + 16, '#fd4', 40); } } }
+}
+const petMult = id => (1 + (petData(id).lvl - 1) * .12) * (petData(id).lvl >= 10 ? 1.5 : 1);
+// misiones personales de aliados
+const AQUEST = {
+  mogzo: { n: 'El escudo de Mogzo', d: 'Derrota 30 monstruos con Mogzo en el grupo.', t: 'kill', c: 30 },
+  merry: { n: 'Superar el pasado', d: 'Llega al piso 8 con Merry en el grupo.', t: 'floor', c: 8 },
+  yume: { n: 'Cazadora de lobos', d: 'Derrota 8 Lobos sombríos con Yume.', t: 'killName', k: 'Lobo sombrío', c: 8 },
+  shihoru: { n: 'Valor de maga', d: 'Derrota a un jefe con Shihoru.', t: 'boss', c: 1 },
+  ranta: { n: 'Camino del Dread Knight', d: 'Derrota 3 monstruos raros o 40 monstruos con Ranta.', t: 'kill', c: 40, rareAlt: 3 },
+};
+const allyMult = id => P.allyQ && P.allyQ[id] && P.allyQ[id].done ? 1.4 : 1;
+function allyQuestEvent(type, name, n, extra) {
+  P.allyQ = P.allyQ || {};
+  for (const a of P.party) {
+    if (a.down) continue; const Q = AQUEST[a.id], q = P.allyQ[a.id] || (P.allyQ[a.id] = { p: 0, r: 0 }); if (q.done) continue;
+    if (Q.t === type && (!Q.k || Q.k === name)) q.p = type === 'floor' ? Math.max(q.p, n) : q.p + n;
+    if (Q.rareAlt && extra === 'rare') q.r++;
+    if (q.p >= Q.c || (Q.rareAlt && q.r >= Q.rareAlt)) { q.done = 1; P.gold += 300; a.hp = allyMaxHp(a.id); log('⭐ ' + ALLIES[a.id].n + ' completó «' + Q.n + '»: ¡ahora es Veterano (+40% vida y daño)! +300 oro', '#fd4'); snd('lvl'); }
+  }
+}
 let comps = [];
-function allyMaxHp(id) { return Math.round((60 + P.lvl * 14) * ALLIES[id].hp); }
+function allyMaxHp(id) { return Math.round((60 + P.lvl * 14) * ALLIES[id].hp * allyMult(id)); }
 function buildComps() {
   comps = [];
   if (P.pet) comps.push({ kind: 'pet', id: P.pet, x: P.x, y: P.y, fx: P.x, fy: P.y, mt: 0, cd: 1 });
@@ -864,7 +938,7 @@ function placeComps() {
   for (const c of comps) { let best = null; for (let r = 1; r < 4 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r && !best; dx++) { const x = P.x + dx, y = P.y + dy; if (!solidAt(x, y) && !comps.some(o => o !== c && o.x === x && o.y === y)) best = [x, y]; } if (best) { c.x = best[0]; c.y = best[1]; } else { c.x = P.x; c.y = P.y; } c.fx = c.x; c.fy = c.y; c.mt = 0; }
 }
 const compAt = (x, y, self) => comps.some(c => c !== self && c.x === x && c.y === y);
-function compDmg(c) { const D = c.kind === 'pet' ? PETS[c.id] : ALLIES[c.id]; return Math.round((4 + P.lvl * 2.2 + (c.kind === 'ally' ? P.lvl : 0)) * D.dmg); }
+function compDmg(c) { const D = c.kind === 'pet' ? PETS[c.id] : ALLIES[c.id]; return Math.round((4 + P.lvl * 2.2 + (c.kind === 'ally' ? P.lvl : 0)) * D.dmg * (c.kind === 'pet' ? petMult(c.id) : allyMult(c.id))); }
 function updateComps(dt) {
   comps.forEach((c, i) => {
     if (c.mt > 0) { c.mt -= dt; const k = Math.max(0, c.mt / .2); c.fx = c.x - c.dx * k; c.fy = c.y - c.dy * k; } else { c.fx = c.x; c.fy = c.y; }
@@ -899,13 +973,16 @@ function hurtAlly(c, d, src) {
 function drawComp(c) {
   const sx = c.fx * TS - camX, sy = c.fy * TS - camY;
   if (c.kind === 'pet') {
-    const D = PETS[c.id], b = Math.abs(Math.sin(time * 10)) * (c.mt > 0 ? 3 : 1);
+    const D = PETS[c.id], b = Math.abs(Math.sin(time * 10)) * (c.mt > 0 ? 3 : 1), evo = petData(c.id).lvl >= 10;
+    cx.fillStyle = '#9cf'; cx.font = '9px sans-serif'; cx.textAlign = 'center'; cx.fillText(petName(c.id), sx + 16, sy + 2);
+    cx.save(); if (evo) { cx.translate(sx + 16, sy + 28); cx.scale(1.35, 1.35); cx.translate(-sx - 16, -sy - 28); cx.fillStyle = 'rgba(255,220,100,.25)'; cx.beginPath(); cx.arc(sx + 16, sy + 18, 12, 0, 7); cx.fill(); }
     cx.fillStyle = 'rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(sx + 16, sy + 28, 8, 3, 0, 0, 7); cx.fill();
-    cx.fillStyle = D.col;
+    cx.fillStyle = evo ? EVO[c.id].col : D.col;
     if (c.id === 'halcon') { const fy = sy + 4 + Math.sin(time * 4) * 3; cx.beginPath(); cx.ellipse(sx + 16, fy + 10, 5, 4, 0, 0, 7); cx.fill(); const wg = Math.sin(time * 14) * 6; cx.beginPath(); cx.moveTo(sx + 16, fy + 9); cx.lineTo(sx + 4, fy + 6 + wg); cx.lineTo(sx + 28, fy + 6 + wg); cx.fill(); cx.fillStyle = '#fc0'; cx.fillRect(sx + 19, fy + 8, 3, 2); }
     else if (c.id === 'slime') { cx.globalAlpha = .85; cx.beginPath(); cx.ellipse(sx + 16, sy + 22 - b / 2, 9 + b / 2, 7 - b / 3, 0, 0, 7); cx.fill(); cx.globalAlpha = 1; cx.fillStyle = '#000'; cx.fillRect(sx + 12, sy + 19, 2, 2); cx.fillRect(sx + 18, sy + 19, 2, 2); }
-    else { cx.fillRect(sx + 8, sy + 16 - b, 16, 9); cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 11 - b, 8, 8); cx.fillRect(sx + 9, sy + 24 - b, 3, 5); cx.fillRect(sx + 20, sy + 24 - b, 3, 5); cx.fillStyle = '#000'; cx.fillRect(sx + (P.x >= c.x ? 25 : 6), sy + 13 - b, 2, 2); if (c.id === 'gato') { cx.fillStyle = D.col; cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 8 - b, 2, 3); cx.fillRect(sx + (P.x >= c.x ? 26 : 10), sy + 8 - b, 2, 3); } }
-    return;
+    else { cx.fillRect(sx + 8, sy + 16 - b, 16, 9); cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 11 - b, 8, 8); cx.fillRect(sx + 9, sy + 24 - b, 3, 5); cx.fillRect(sx + 20, sy + 24 - b, 3, 5); cx.fillStyle = '#000'; cx.fillRect(sx + (P.x >= c.x ? 25 : 6), sy + 13 - b, 2, 2); if (c.id === 'gato') { cx.fillStyle = evo ? EVO[c.id].col : D.col; cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 8 - b, 2, 3); cx.fillRect(sx + (P.x >= c.x ? 26 : 10), sy + 8 - b, 2, 3); } }
+    if (evo && c.id === 'perro') { cx.fillStyle = '#622'; cx.fillRect(sx + (P.x >= c.x ? 14 : 10), sy + 8 - b, 7, 7); }
+    cx.restore(); return;
   }
   const D = ALLIES[c.id];
   if (c.a.down) { cx.globalAlpha = .5; cx.save(); cx.translate(sx + 16, sy + 20); cx.rotate(Math.PI / 2); cx.translate(-16, -16); drawChar(0, 0, '#777', [0, 1], {}); cx.restore(); cx.globalAlpha = 1; return; }
@@ -914,6 +991,48 @@ function drawComp(c) {
   cx.fillStyle = '#9cf'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(D.n, sx + 16, sy - 8);
   cx.fillStyle = '#000'; cx.fillRect(sx + 4, sy - 5, 24, 3); cx.fillStyle = '#4c4'; cx.fillRect(sx + 4, sy - 5, 24 * c.a.hp / allyMaxHp(c.id), 3);
 }
+
+// ---------- Hechizos con palabras (estilo Tibia) ----------
+const SPELLS = {
+  'exura': { n: 'Curación ligera', lvl: 1, mp: 20, f: () => spellHeal(30 + stat('int') * 3) },
+  'exura gran': { n: 'Curación intensa', lvl: 8, mp: 50, f: () => spellHeal(80 + stat('int') * 6) },
+  'exura vita': { n: 'Curación definitiva', lvl: 20, mp: 120, f: () => spellHeal(200 + stat('int') * 10) },
+  'exori': { n: 'Berserk', lvl: 5, mp: 25, f: () => spellArea(1, atk() * 1.5, '#fd8') },
+  'exori gran': { n: 'Berserk feroz', lvl: 15, mp: 60, f: () => spellArea(1, atk() * 3, '#fa4') },
+  'exevo flam hur': { n: 'Ola de fuego', lvl: 10, mp: 40, f: () => spellWave(20 + stat('int') * 4) },
+  'exevo gran mas vis': { n: 'Furia de los cielos', lvl: 20, mp: 160, f: () => spellArea(6, 60 + stat('int') * 8, '#aef', true) },
+  'utani hur': { n: 'Prisa', lvl: 3, mp: 30, f: () => { P.buffs.prisa = 30; } },
+  'utamo vita': { n: 'Escudo mágico', lvl: 12, mp: 50, f: () => { P.buffs.escudo = 60; } },
+  'utevo lux': { n: 'Luz', lvl: 1, mp: 15, f: () => { P.buffs.luz = 120; } },
+  'exevo pan': { n: 'Crear comida', lvl: 4, mp: 40, f: () => { P.cons.pan++; } },
+};
+function spellHeal(h) { h = Math.round(h); P.hp = Math.min(maxHp(), P.hp + h); addText(P.fx * TS + 16, P.fy * TS + 4, '+' + h, '#5f5', 17); ring(P.fx * TS + 16, P.fy * TS + 16, '#5f5'); snd('heal'); }
+function spellArea(r, dmg, col, sky) {
+  const hit = ents.filter(e => Math.max(Math.abs(e.x - P.x), Math.abs(e.y - P.y)) <= r && (r <= 1 || los(P.x, P.y, e.x, e.y)));
+  hit.forEach(e => { damageEnemy(e, dmg, col); if (sky) for (let i = 0; i < 6; i++) parts.push({ x: e.fx * TS + 16 + rnd(-4, 4), y: e.fy * TS - i * 14, vx: 0, vy: 200, l: .3, col: '#fff', sz: 3 }); });
+  ring(P.fx * TS + 16, P.fy * TS + 16, col); if (r > 1) { ring(P.fx * TS + 16, P.fy * TS + 16, '#fff'); weather.flash = Math.max(weather.flash || 0, .15); shake = 14; snd('boss'); } else { shake = 6; snd('hit'); }
+  return hit.length;
+}
+function spellWave(dmg) {
+  const [dx, dy] = P.dir; let n = 0;
+  for (let d = 1; d <= 4; d++) for (let w = -(d > 1 ? 1 : 0); w <= (d > 1 ? 1 : 0); w++) {
+    const x = P.x + dx * d + (dy ? w : 0), y = P.y + dy * d + (dx ? w : 0); if (SOLID.has(gt(W, x, y))) continue;
+    burst(x * TS + 16, y * TS + 16, '#f80', 6); const e = ents.find(e => e.x === x && e.y === y); if (e) { damageEnemy(e, dmg, '#f93'); n++; }
+  }
+  snd('fire'); return n;
+}
+function castSpell(txt) {
+  const w = (txt || '').toLowerCase().trim().replace(/\s+/g, ' '); if (!w) return 'empty';
+  const S = SPELLS[w];
+  if (!S) { P.say = { t: txt.slice(0, 60), l: 4 }; return 'say'; }
+  if (P.lvl < S.lvl) { log('Necesitas nivel ' + S.lvl + ' para «' + w + '».', '#f88'); return 'lvl'; }
+  if ((P.cds.spell || 0) > 0) return 'cd';
+  if (P.mp < S.mp) { log('Maná insuficiente para «' + w + '» (' + S.mp + ').', '#88f'); return 'mp'; }
+  P.mp -= S.mp; P.cds.spell = 1;
+  texts.push({ x: P.fx * TS + 16, y: P.fy * TS - 14, t: w, col: '#fe7', sz: 14, l: 1.6 });
+  S.f(); return 'cast';
+}
+function openChat() { const c = document.getElementById('chat'); c.style.display = 'block'; c.value = ''; c.focus(); }
 
 // ---------- Partículas ----------
 function burst(x, y, col, n) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(30, 160); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, l: rnd(.3, .7), col, sz: rnd(2, 4) }); } }
@@ -994,6 +1113,7 @@ function update(dt) {
   for (const b in P.buffs) { P.buffs[b] -= dt; if (P.buffs[b] <= 0) { delete P.buffs[b]; log('El efecto ' + BUFFN[b] + ' terminó.', '#aaa'); } }
   if (P.buffs.vigor > 0) P.hp = Math.min(maxHp(), P.hp + dt * (1 + stat('vit') * .2) * 2);
   updateComps(dt);
+  updateArena(dt);
   growCrops(dt); updateVisitors(dt); updateSeason(dt); updateField(dt);
   P.achT = (P.achT || 0) - dt; if (P.achT <= 0) { P.achT = 1; checkAch(); }
   // regeneración de recursos en ciudad
@@ -1147,7 +1267,7 @@ function render() {
   // entidades ordenadas por y
   const list = [...(W === town ? visitors : []).map(v => ({ v, y: v.fy })), ...(W.npcs || []).map(n => ({ n, y: n.y })), ...ents.map(e => ({ e, y: e.fy })), ...comps.map(c => ({ c, y: c.fy - .01 })), { p: 1, y: P.fy }].sort((a, b) => a.y - b.y);
   for (const o of list) {
-    if (o.n) { const sx = o.n.x * TS - camX, sy = o.n.y * TS - camY; drawChar(sx, sy, o.n.col, [0, 1], { hair: o.n.role === 'god' ? '#111' : '#a63', legs: '#335' }); cx.fillStyle = '#fff'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(o.n.n, sx + 16, sy - 4); if (o.n.role === 'quest' && QUESTS[P.q] && P.qp >= QUESTS[P.q].c) { cx.fillStyle = '#fd4'; cx.font = 'bold 18px sans-serif'; cx.fillText('!', sx + 16, sy - 14 + Math.sin(time * 5) * 2); } }
+    if (o.n) { const sx = o.n.x * TS - camX, sy = o.n.y * TS - camY; if (!isOpen(o.n.role)) { cx.fillStyle = '#ccf'; cx.font = 'bold 11px sans-serif'; cx.textAlign = 'center'; cx.fillText('Zzz', sx + 26, sy - 14 + Math.sin(time * 2) * 3); } drawChar(sx, sy, o.n.col, [0, 1], { hair: o.n.role === 'god' ? '#111' : '#a63', legs: '#335' }); cx.fillStyle = '#fff'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(o.n.n, sx + 16, sy - 4); if (o.n.role === 'quest' && QUESTS[P.q] && P.qp >= QUESTS[P.q].c) { cx.fillStyle = '#fd4'; cx.font = 'bold 18px sans-serif'; cx.fillText('!', sx + 16, sy - 14 + Math.sin(time * 5) * 2); } }
     else if (o.v) { const v = o.v, sx = v.fx * TS - camX, sy = v.fy * TS - camY; drawChar(sx, sy, v.col, [0, 1], { hair: v.hair, moving: v.mt > 0 }); cx.fillStyle = '#9cf'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(v.n + (v.gift ? ' 🎁' : ''), sx + 16, sy - 4);
       if (Math.abs(v.x - P.x) + Math.abs(v.y - P.y) <= 3) { cx.font = '11px sans-serif'; const w = cx.measureText(v.line).width + 10; cx.fillStyle = '#fffe'; cx.fillRect(sx + 16 - w / 2, sy - 30, w, 16); cx.fillStyle = '#222'; cx.fillText(v.line, sx + 16, sy - 18); } }
     else if (o.c) drawComp(o.c);
@@ -1165,7 +1285,7 @@ function render() {
   // cursor de construcción
   if (buildMode) { const [fx, fy] = facing(), id = Object.keys(BLOCKS)[buildSel]; cx.globalAlpha = .5 + Math.sin(time * 6) * .2; drawBlock(id, fx * TS - camX, fy * TS - camY); cx.globalAlpha = 1; cx.strokeStyle = '#ff0'; cx.strokeRect(fx * TS - camX, fy * TS - camY, TS, TS); }
   // iluminación (antorchas, jugador, hechizos)
-  const night = W.dark ? 0 : (Math.sin(time / 120) + 1) / 2;
+  const night = W.dark ? 0 : nightLevel();
   const dk = W.dark ? .93 : night * .6;
   if (dk > .02) {
     if (!render.lc) render.lc = document.createElement('canvas');
@@ -1173,7 +1293,7 @@ function render() {
     const th = W.theme || THEMES[0], fg = W.dark ? th.fog : [10, 10, 40];
     l.globalCompositeOperation = 'source-over'; l.clearRect(0, 0, vw, vh); l.fillStyle = `rgba(${fg},${dk})`; l.fillRect(0, 0, vw, vh);
     l.globalCompositeOperation = 'destination-out';
-    const lights = [[P.fx * TS + 16, P.fy * TS + 16, 175 + Math.sin(time * 3) * 6]];
+    const lights = [[P.fx * TS + 16, P.fy * TS + 16, (175 + Math.sin(time * 3) * 6) * (P.buffs.luz > 0 ? 1.7 : 1)]];
     if (W.torches) for (const k of W.torches) { const [x, y] = k.split(',').map(Number); lights.push([x * TS + 16, y * TS + 24, 115 + Math.sin(time * 9 + x) * 6, 1]); }
     for (const k in W.obj) if (BLOCKS[W.obj[k]].light) { const [x, y] = k.split(',').map(Number); lights.push([x * TS + 16, y * TS + 12, 120 + Math.sin(time * 9 + x) * 6, 1]); }
     for (const p of projs) if (p.kind !== 'arrow') lights.push([p.x, p.y, 60]);
@@ -1184,6 +1304,7 @@ function render() {
     for (const [x, y, r, warm] of lights) if (warm) { const sx = x - camX, sy = y - camY; if (sx < -r || sy < -r || sx > vw + r || sy > vh + r) continue; const g = cx.createRadialGradient(sx, sy, 0, sx, sy, r * .7); g.addColorStop(0, `rgba(${tc},.22)`); g.addColorStop(1, 'rgba(0,0,0,0)'); cx.fillStyle = g; cx.fillRect(sx - r, sy - r, r * 2, r * 2); }
     cx.globalCompositeOperation = 'source-over';
   }
+  if (P.say) { P.say.l -= 1 / 60; if (P.say.l <= 0) P.say = null; else { cx.font = '12px sans-serif'; cx.textAlign = 'center'; const sx = P.fx * TS + 16 - camX, sy = P.fy * TS - camY - 26; cx.fillStyle = '#000'; cx.fillText(P.say.t, sx + 1, sy + 1); cx.fillStyle = '#ff6'; cx.fillText(P.say.t, sx, sy); } }
   drawWeather(vw, vh); drawFishing(vw, vh);
   for (const t of texts) { cx.globalAlpha = Math.min(1, t.l * 2); cx.font = `bold ${t.sz}px sans-serif`; cx.textAlign = 'center'; cx.fillStyle = '#000'; cx.fillText(t.t, t.x - camX + 1, t.y - camY + 1); cx.fillStyle = t.col; cx.fillText(t.t, t.x - camX, t.y - camY); }
   cx.globalAlpha = 1;
@@ -1214,7 +1335,7 @@ function hud() {
   $('hp').style.width = (100 * P.hp / mh) + '%'; $('hpt').textContent = `PV ${Math.ceil(P.hp)}/${mh}`;
   $('mp').style.width = (100 * P.mp / mp) + '%'; $('mpt').textContent = `MP ${Math.floor(P.mp)}/${mp}`;
   $('xp').style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
-  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + (P.party.length ? '<br>👥 ' + P.party.map(x => `${ALLIES[x.id].n} ${x.down ? '💀' : Math.ceil(x.hp) + '/' + allyMaxHp(x.id)}`).join(' · ') : '') + (P.pet ? ' 🐾 ' + PETS[P.pet].n : '') + (P.riding ? ' 🐴' : '') + (P.bank ? ' · 🏦 ' + P.bank : '') + `<br>${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
+  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + (P.party.length ? '<br>👥 ' + P.party.map(x => `${ALLIES[x.id].n} ${x.down ? '💀' : Math.ceil(x.hp) + '/' + allyMaxHp(x.id)}`).join(' · ') : '') + (P.pet ? ' 🐾 ' + PETS[P.pet].n : '') + (P.riding ? ' 🐴' : '') + (P.bank ? ' · 🏦 ' + P.bank : '') + (arena ? `<br><b style="color:#f84">🏟 Oleada ${arena.wave} ${arena.active ? '— enemigos: ' + ents.length : '— siguiente en ' + Math.ceil(arena.wait) + 's'}</b>` : '') + (P.pet ? ' 🐾 ' + petName(P.pet) : '') + `<br>🕐 ${clock()} ${nightLevel() > .5 ? '🌙' : ''} · ${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
   $('log').innerHTML = msgs.map(m => `<div style="color:${m.c};opacity:${Math.min(1, m.a)}">${m.t}</div>`).join('');
   let h = ''; ACTIVE.forEach((id, i) => { const s = SKILLS[id], cd = P.cds[id] || 0; h += `<div class="slot" style="opacity:${P.sk[id] ? 1 : .35}"><span class="k">${i + 1}</span><b>${['💥', '🌀', '🔥', '✨'][i]}</b>${s.n.split(' ')[0]}<div class="cd" style="height:${cd / s.cd * 100}%"></div></div>`; });
   h += `<div class="slot"><span class="k">5</span><b>❤</b>x${P.cons.pocion_vida}</div><div class="slot"><span class="k">6</span><b>💧</b>x${P.cons.pocion_mana}</div>`;
@@ -1297,6 +1418,11 @@ function drawPanel() {
     h += gifts.map(k => `<button data-act="gift" data-k="${k}" ${P.gifted[n.id] === P.day ? 'disabled' : ''}>${MATS[k] || CONSUM[k].ico} ${k.replace('_', ' ')}${F.likes.includes(k) ? ' 💖' : ''}</button>`).join('') || '<i>No tienes nada que regalar.</i>';
     h += `<h3>Recompensas de amistad</h3>` + F.rew.map(([hh, d]) => `<div style="color:${hs >= hh ? '#9f9' : '#888'}">${hs >= hh ? '✔' : '○'} ${hh} 💖 — ${d}</div>`).join('');
   }
+  if (panel === 'arena') {
+    h = close + `<h2>🏟 Coliseo de Orario</h2><p>Lucha contra oleadas cada vez más fuertes, con un campeón cada 5 oleadas. Si mueres aquí no pierdes oro. Sal por la puerta sur cuando quieras.</p><p>Récord: oleada ${P.arenaBest || 0} · Fichas: 🎟 ${P.tokens || 0} · Horario 10:00–23:00 (${clock()})</p>
+      <button data-act="arenago" ${isOpen('arena') ? '' : 'disabled'}>⚔ Entrar a la arena</button><h3>Tienda de fichas</h3>
+      <button data-act="tok" data-k="epic" ${(P.tokens || 0) >= 15 ? '' : 'disabled'}>Cofre épico (15 🎟)</button><button data-act="tok" data-k="leg" ${(P.tokens || 0) >= 50 ? '' : 'disabled'}>Cofre legendario (50 🎟)</button><button data-act="petelixir" ${(P.tokens || 0) >= 5 && P.pet ? '' : 'disabled'}>Elixir de mascota: +1 nivel (5 🎟)</button>`;
+  }
   if (panel === 'dmerch') {
     h = close + `<h2>🎒 Mercader errante</h2><p>«Psst… mercancía rara de las profundidades. Solo por hoy.» 💰 ${P.gold}</p><div class="grid">` + (W.mstock || []).map((it, i) => `<div>${itemHtml(it, 'none')}<button data-act="dbuy" data-k="${i}" ${P.gold >= it.price ? '' : 'disabled'}>${it.price}💰</button></div>`).join('') + '</div>';
     h += `<p><button data-act="delixir" ${P.gold >= 150 + P.floor * 20 ? '' : 'disabled'}>Elixir completo (+3 pociones de vida y maná) — ${150 + P.floor * 20} oro</button></p>`;
@@ -1318,13 +1444,16 @@ function drawPanel() {
   }
   if (panel === 'stable') {
     h = close + `<h2>🐴 Establo de Ryu</h2><p>💰 ${P.gold}</p><h3>Mascotas (te acompañan y luchan)</h3>`;
-    for (const k in PETS) { const D = PETS[k], own = P.pets.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<button data-act="setpet" data-k="${k}">${P.pet === k ? '✔ Activa' : 'Llevar'}</button>` : `<button data-act="buypet" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
+    for (const k in PETS) { const D = PETS[k], own = P.pets.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<small>[${petName(k)} · ${petData(k).xp}/${petNeed(petData(k).lvl)} XP]</small> <button data-act="setpet" data-k="${k}">${P.pet === k ? '✔ Activa' : 'Llevar'}</button>` : `<button data-act="buypet" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
     h += `<button data-act="setpet" data-k="">Dejar mascota en casa</button><h3>Monturas (N para montar)</h3>`;
     for (const k in MOUNTS) { const D = MOUNTS[k], own = P.mounts.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<button data-act="setmount" data-k="${k}">${P.mount === k ? '✔ Activa' : 'Usar'}</button>` : `<button data-act="buymount" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
   }
   if (panel === 'recruit') {
     h = close + `<h2>⚔ Reclutas del Gremio</h2><p>Forma un grupo como en Grimgar (máx. ${MAX_PARTY} aliados). Suben de nivel contigo. 💰 ${P.gold}</p>`;
     for (const k in ALLIES) { const D = ALLIES[k], inp = P.party.find(a => a.id === k), cost = D.price + P.lvl * 20; h += `<div style="margin:4px 0"><b style="color:${D.col === '#333' ? '#aaa' : D.col}">${D.n}</b> — ${D.cls} ${D.healer ? '(cura)' : D.taunt ? '(tanque)' : D.range > 1 ? '(distancia)' : '(cuerpo a cuerpo)'} ${inp ? `<button data-act="dismiss" data-k="${k}">Despedir</button> ${inp.down ? '💀' : '❤ ' + inp.hp + '/' + allyMaxHp(k)}` : `<button data-act="hire" data-k="${k}" ${P.party.length < MAX_PARTY && P.gold >= cost ? '' : 'disabled'}>Reclutar ${cost}💰</button>`}</div>`; }
+  }
+  if (panel === 'recruit') {
+    h += P.party.length ? '<h3>Misiones personales</h3>' + P.party.map(a => { const Q = AQUEST[a.id], q = (P.allyQ || {})[a.id] || { p: 0 }; return `<div>${q.done ? '⭐' : '📜'} <b>${ALLIES[a.id].n}</b>: ${Q.n} — <small>${Q.d} ${q.done ? '¡Completada! (Veterano)' : `(${Math.min(q.p, Q.c)}/${Q.c}${Q.rareAlt ? ', raros ' + (q.r || 0) + '/' + Q.rareAlt : ''})`}</small></div>`; }).join('') : '';
   }
   if (panel === 'ach') {
     const got = ACH.filter(a => P.ach[a.id]).length;
@@ -1334,7 +1463,7 @@ function drawPanel() {
     h = close + `<h2>⚙ Opciones</h2><button data-act="music">${music.on ? '🔇 Silenciar música' : '🎵 Activar música'} (M)</button>
     <h3>Exportar / importar partida</h3><p>Exportar descarga un archivo .txt y muestra el código aquí. Para importar, pega un código y pulsa Importar.</p>
     <button data-act="export">💾 Exportar</button> <button data-act="import">📥 Importar</button><br><textarea id="savetxt" style="width:100%;height:90px;background:#000;color:#9f9;font-size:10px"></textarea>
-    <h3>Mando</h3><p>Stick/cruceta: mover · A atacar · B usar/cerrar · X bola de fuego · Y golpe · LB/RB pociones · LT/RT torbellino/curar · Select habilidades · Start inventario</p>`;
+    <h3>Hechizos (Enter para escribir · F1-F4 atajos)</h3>${[0, 1, 2, 3].map(i => `F${i + 1}: <input id="bind${i}" value="${P.binds[i] || ''}" style="width:160px">`).join(' ')} <button data-act="binds">Guardar atajos</button><p><small>${Object.entries(SPELLS).map(([w, S]) => `<b>${w}</b> (${S.n}, nv ${S.lvl}, ${S.mp} MP)`).join(' · ')}</small></p><h3>Mando</h3><p>Stick/cruceta: mover · A atacar · B usar/cerrar · X bola de fuego · Y golpe · LB/RB pociones · LT/RT torbellino/curar · Select habilidades · Start inventario</p>`;
   }
   if (panel === 'death') {
     h = `<h2 style="color:#f44">💀 Has caído</h2><p>Derrotado por <b>${panel_data.src}</b>.<br>Hestia te rescató y te llevó a la ciudad. Perdiste ${panel_data.lost} de oro.</p><p>Nivel ${P.lvl} · Piso máximo ${P.maxFloor} · Monstruos: ${P.kills}<br>Récord de piso: ${localStorage.getItem('cc_record') || P.maxFloor}</p><button data-act="close">Levantarse</button>`;
@@ -1359,6 +1488,7 @@ function panelAct(a, d) {
   if (a === 'eat') usePot(d.k);
   if (a === 'music') toggleMusic();
   if (a === 'chat') chat(panel_data.id);
+  if (a === 'binds') { for (let i = 0; i < 4; i++) { const el = document.getElementById('bind' + i); if (el) P.binds[i] = el.value.toLowerCase().trim(); } log('Atajos guardados.', '#9f9'); }
   if (a === 'title') { P.title = d.k || ''; }
   if (a === 'dbuy') { const it = W.mstock && W.mstock[+d.k]; if (it && P.gold >= it.price && P.inv.length < 32) { P.gold -= it.price; W.mstock.splice(+d.k, 1); P.inv.push(it); log('Compraste ' + it.name + ' [' + RAR[it.rar] + ']', '#c7f'); snd('pick'); } }
   if (a === 'delixir') { const c = 150 + P.floor * 20; if (P.gold >= c) { P.gold -= c; P.cons.pocion_vida += 3; P.cons.pocion_mana += 3; snd('pick'); } }
@@ -1375,6 +1505,9 @@ function panelAct(a, d) {
   if (a === 'setpet') { P.pet = d.k || null; buildComps(); }
   if (a === 'buymount' && MOUNTS[d.k] && P.gold >= MOUNTS[d.k].price && !P.mounts.includes(d.k)) { P.gold -= MOUNTS[d.k].price; P.mounts.push(d.k); P.mount = d.k; snd('lvl'); log('¡Compraste: ' + MOUNTS[d.k].n + '! Pulsa N para montar.', '#9cf'); }
   if (a === 'setmount') { P.mount = d.k; }
+  if (a === 'petelixir') { if ((P.tokens || 0) >= 5 && P.pet) { P.tokens -= 5; petGainXp(petNeed(petData().lvl)); } }
+  if (a === 'arenago') { startArena(); return; }
+  if (a === 'tok') { const c = d.k === 'leg' ? 50 : 15; if ((P.tokens || 0) >= c && P.inv.length < 32) { P.tokens -= c; const it = genItem(null, Math.max(P.lvl, P.maxFloor), d.k === 'leg' ? 4 : 3); P.inv.push(it); log('🎁 ' + it.name + ' [' + RAR[it.rar] + ']', '#fd4'); snd('lvl'); } }
   if (a === 'hire') { const D = ALLIES[d.k], cost = D.price + P.lvl * 20; if (P.party.length < MAX_PARTY && P.gold >= cost && !P.party.find(x => x.id === d.k)) { P.gold -= cost; P.party.push({ id: d.k, hp: allyMaxHp(d.k), down: 0 }); buildComps(); log(D.n + ' (' + D.cls + ') se une a tu grupo.', '#9cf'); snd('lvl'); } }
   if (a === 'dismiss') { P.party = P.party.filter(x => x.id !== d.k); buildComps(); }
   if (a === 'gift') giveGift(panel_data.id, d.k);
@@ -1406,7 +1539,7 @@ function save() {
   if (!P || !town) return;
   try {
     const rec = Math.max(+localStorage.getItem('cc_record') || 0, P.maxFloor); localStorage.setItem('cc_record', rec);
-    localStorage.setItem('cc_save', JSON.stringify({ v: 4, P: { ...P, target: null, trail: [] }, obj: town.obj, crops: town.crops, uid }));
+    localStorage.setItem('cc_save', JSON.stringify({ v: 5, P: { ...P, target: null, trail: [], say: null, ...(W && W.isArena ? { x: 34, y: 16 } : {}) }, obj: town.obj, crops: town.crops, uid }));
   } catch (e) { }
 }
 function load() {
@@ -1457,4 +1590,4 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 // API de pruebas
-window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };
+window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, castSpell, SPELLS, hour, clock, isOpen, nightLevel, startArena, nextWave, updateArena, get arena() { return arena; }, petGainXp, petData, petMult, petName, allyQuestEvent, allyMult, AQUEST, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };

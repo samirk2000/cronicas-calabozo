@@ -79,3 +79,20 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Mercader errante** en el calabozo: aparece siempre en los pisos 2, 5, 8… cuando no son de jefe, y con un 25 % de probabilidad en los demás. Vende 3 objetos de rareza Rara o superior y elixires, y no hay monstruos cerca de él.
 - **Títulos**: en Logros (L) puedes elegir un logro desbloqueado como título, que aparece sobre tu personaje.
 - Las pruebas suben a **53** (`python3 tests/smoke_test.py`).
+
+## Novedades (iteración 6)
+- **Reloj y día/noche reales**: un día dura 4 minutos (10 s por hora) y empieza a las 06:00. Atardece a las 18:00 y anochece por completo a las 21:00. La hora aparece en el HUD. Dormir de noche en tu cama te lleva a las 06:00 del día siguiente.
+- **Horarios de tiendas**: Bors 8–20, Welf 8–19, Banco 9–18, Establo 7–20, Reclutas 8–22, Eina 8–21 y Coliseo 10–23. El Depósito y el Templo abren las 24 h. Cuando un local está cerrado, su NPC muestra «Zzz».
+- **Hechizos con palabras estilo Tibia**: pulsa **Enter** y escribe el hechizo, o usa **F1-F4** (los atajos se configuran en Opciones). Las palabras flotan sobre tu personaje y, si escribes algo que no es un hechizo, se muestra como diálogo.
+  - `exura`, `exura gran`, `exura vita`: curaciones
+  - `exori`, `exori gran`: golpe en área
+  - `exevo flam hur`: ola de fuego
+  - `exevo gran mas vis`: Furia de los cielos, daño en un radio de 6 casillas
+  - `utani hur`: prisa
+  - `utamo vita`: escudo mágico, el daño se descuenta del maná
+  - `utevo lux`: luz
+  - `exevo pan`: crea comida
+- **Mascotas con nivel**: ganan XP al combatir (hasta nivel 30) y ganan daño con cada nivel. A nivel 10 **evolucionan**: Perro → Cerbero, Gato → Nekomata (+50 % de oro), Halcón → Grifo y Slime → Rey Slime.
+- **Misiones personales de aliados**: cada recluta tiene su historia (Mogzo, Merry, Yume, Shihoru, Ranta). Al completarla se vuelve **Veterano** (+40 % de vida y daño) y te da 300 de oro.
+- **Coliseo (arena PvE)**: oleadas cada vez más fuertes con un **campeón** cada 5. Cada oleada da oro, XP y fichas, y cada 5 oleadas hay un premio épico o legendario. Morir aquí no cuesta oro. Las fichas se canjean por cofres épicos o legendarios y por elixires de mascota. El récord queda guardado.
+- Las pruebas suben a **63** (`python3 tests/smoke_test.py`).

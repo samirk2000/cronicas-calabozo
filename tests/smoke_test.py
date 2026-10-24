@@ -260,6 +260,62 @@ with sync_playwright() as p:
     check('título de logro sobre el jugador (persistente)', r['t']=='Primera sangre' and r['saved']=='Primera sangre', r)
     G("g.enterTown(); g.P.x=12; g.P.y=7; g.P.fx=12; g.P.fy=7; g.toggleMount(); g.buildComps();"); time.sleep(.5); pg.screenshot(path=ROOT + '/tests/shot_town2.png')
 
+
+    # 26 Horarios y día/noche
+    r = G("""g.enterTown(); const P=g.P; const shop=g.town.npcs.find(n=>n.role==='shop'), depot=g.town.npcs.find(n=>n.role==='depot');
+      P.dayT=0; const h6=g.clock(), open6=g.isOpen('shop'), n6=g.nightLevel(); g.closePanel(); const r6=(()=>{g.talk.direct=1; try{return g.talk(shop)}finally{g.talk.direct=0}})(); const p6=g.panel;
+      P.dayT=60; const h12=g.clock(), open12=g.isOpen('shop'), n12=g.nightLevel(); g.talk.direct=1; g.talk(shop); g.talk.direct=0; const p12=g.panel; g.closePanel();
+      P.dayT=170; const h23=g.clock(), n23=g.nightLevel(), dep23=g.isOpen('depot'), bank23=g.isOpen('bank'); g.render();
+      delete g.town.obj['35,13']; delete g.town.obj['34,13']; P.x=34; P.y=13; P.dir=[1,0]; P.blocks.cama=1; g.setBuild(g.BLOCKIDS().indexOf('cama')); g.placeBlock(35,13); const d0=P.day; const sl=g.interact(); 
+      return {h6,open6,r6,p6,h12,open12,p12,n6,n12,h23,n23,dep23,bank23,sl,day:P.day-d0,dayT:P.dayT};""")
+    check('reloj y tiendas con horario (cerrado 06:00, abierto 12:00)', r['h6']=='06:00' and not r['open6'] and r['r6']=='closed' and r['p6'] is None and r['h12']=='12:00' and r['open12'] and r['p12']=='shop', r)
+    check('noche a las 23:00, depósito 24h, banco cerrado; dormir pasa al día siguiente', r['n23']==1 and r['n12']==0 and r['dep23'] and not r['bank23'] and r['sl']=='slept' and r['day']==1 and r['dayT']==0, r)
+    G("g.P.dayT=180; g.P.x=20; g.P.y=12; g.P.fx=20; g.P.fy=12"); time.sleep(.4); pg.screenshot(path=ROOT + '/tests/shot_night.png'); G("g.P.dayT=40")
+
+    # 27 Hechizos con palabras
+    r = G("""const P=g.P; g.enterFloor(1); g.ents.length=0; P.lvl=25; P.mp=9999; P.base.int=20; P.hp=10; P.cds={};
+      const a=g.castSpell('EXURA'); const healed=P.hp>10; const cd=g.castSpell('exura'); P.cds={};
+      let pos=null; for(const [ox,oy] of [[1,0],[-1,0],[0,1],[0,-1]]) if(!g.solidAt(P.x+ox,P.y+oy,true)){pos=[P.x+ox,P.y+oy];break}
+      const e=g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false); e.hp=e.mhp=99999; const hp0=e.hp; g.castSpell('exori'); const exori=e.hp<hp0; P.cds={};
+      const e2=g.spawnEnemy(g.EN[0],P.x+(pos[0]-P.x)*1,P.y+(pos[1]-P.y)*1,1,false); const h1=e.hp; g.castSpell('exevo gran mas vis'); const mas=e.hp<h1; P.cds={};
+      g.castSpell('utani hur'); const haste=P.buffs.prisa>0; P.cds={}; g.castSpell('utamo vita'); const shield=P.buffs.escudo>0; P.cds={};
+      const mp0=P.mp, hp1=P.hp; g.hurtPlayer ? 0 : 0; P.cds={}; g.castSpell('utevo lux'); P.cds={}; const pan0=P.cons.pan; g.castSpell('exevo pan'); P.cds={};
+      P.lvl=1; const low=g.castSpell('exura vita'); P.lvl=25; P.mp=0; const nomp=g.castSpell('exura'); P.mp=999; const say=g.castSpell('hola amigos');
+      const words=[...document.querySelectorAll('canvas')].length; g.ents.length=0;
+      return {a, healed, cd, exori, mas, haste, shield, lux:P.buffs.luz>0, pan:P.cons.pan-pan0, low, nomp, say, sayT:P.say&&P.say.t};""")
+    check('hechizos: exura, exori, exevo gran mas vis, utani hur, utamo vita, utevo lux, exevo pan', r['a']=='cast' and r['healed'] and r['cd']=='cd' and r['exori'] and r['mas'] and r['haste'] and r['shield'] and r['lux'] and r['pan']==1, r)
+    check('hechizos validan nivel/maná y texto normal es diálogo', r['low']=='lvl' and r['nomp']=='mp' and r['say']=='say' and r['sayT']=='hola amigos', r)
+    r = G("""const P=g.P; P.buffs.escudo=60; P.mp=500; const hp0=P.hp; P.hp=100; g.enterTown(); const e=g.spawnEnemy(g.EN[0],1,1,1,false); g.ents.length=0; return true""")
+    G("g.P.mp=999; g.P.cds={}; g.P.hp=50"); pg.keyboard.press('Enter'); time.sleep(.1); pg.keyboard.type('exura gran'); pg.keyboard.press('Enter'); time.sleep(.2)
+    r = G("return {hp:g.P.hp, chat:document.getElementById('chat').style.display}")
+    check('escribir hechizo en el chat (Enter)', r['hp'] > 50 and r['chat'] == 'none', r)
+    G("g.P.mp=999; g.P.cds={}; g.P.hp=50; g.P.binds[0]='exura'"); pg.keyboard.press('F1'); time.sleep(.1)
+    check('atajo F1 lanza hechizo', G("return g.P.hp>50"))
+
+    # 28 Mascotas: nivel y evolución
+    r = G("""const P=g.P; P.pets=['perro','gato']; P.pet='perro'; P.petLv={}; g.buildComps(); const m1=g.petMult('perro'); for(let i=0;i<200 && g.petData().lvl<10;i++) g.petGainXp(100); const d=g.petData();
+      const m10=g.petMult('perro'); g.render(); g.save(); g.load(); return {lvl:d.lvl, m1, m10, name:g.petName('perro'), saved:g.petData('perro').lvl};""")
+    check('mascota sube de nivel y evoluciona (Cerbero)', r['lvl']>=10 and r['m10']>r['m1']*2 and r['name'].startswith('Cerbero') and r['saved']>=10, r)
+
+    # 29 Misiones personales de aliados
+    r = G("""const P=g.P; P.party=[{id:'mogzo',hp:100,down:0},{id:'merry',hp:100,down:0}]; P.allyQ={}; g.buildComps(); const hp0=g.allyMaxHp('mogzo');
+      for(let i=0;i<30;i++) g.allyQuestEvent('kill',null,1); const mog=P.allyQ.mogzo.done; g.allyQuestEvent('floor',null,8); const mer=P.allyQ.merry.done;
+      g.openPanel('recruit'); const html=document.getElementById('panel').innerHTML; g.closePanel(); return {mog, mer, hpUp:g.allyMaxHp('mogzo')>hp0*1.3, mult:g.allyMult('mogzo'), html:html.includes('Misiones personales')&&html.includes('Veterano')};""")
+    check('misiones personales de aliados → Veterano', r['mog']==1 and r['mer']==1 and r['hpUp'] and r['html'], r)
+
+    # 30 Arena
+    r = G("""const P=g.P; g.enterTown(); P.dayT=60; P.hp=1e6; P.lvl=10; const tk0=P.tokens||0, gold0=P.gold; const ok=g.startArena(); const name=g.W.name;
+      g.nextWave(); const w1=g.ents.length; g.ents.length=0; g.updateArena(0.1); const after=g.arena.active; for(let i=0;i<5;i++){ g.updateArena(1); }
+      const w2=g.arena.wave; for(let w=g.arena.wave; w<5; w++){ g.ents.length=0; g.updateArena(0.1); g.arena.wait=0; g.updateArena(0.01); }
+      const champ=g.ents.some(e=>e.champion); g.ents.length=0; const inv0=P.inv.length; g.updateArena(0.1);
+      const res={ok, name, w1, after, w2, wave:g.arena.wave, champ, tokens:P.tokens-tk0, gold:P.gold-gold0, best:P.arenaBest, prize:P.inv.length-inv0};
+      P.gold=1000; g.die('arena'); g.closePanel(); res.noLoss=P.gold===1000; res.town=g.W===g.town; return res;""")
+    check('arena: oleadas, campeón cada 5, fichas/oro/premio, sin pérdida al morir', r['ok'] and r['name']=='Coliseo de Orario' and r['w1']>=3 and r['after']==False and r['w2']==2 and r['champ'] and r['tokens']>0 and r['gold']>0 and r['best']==5 and r['noLoss'] and r['town'], r)
+    r = G("""const P=g.P; P.tokens=100; P.pet='perro'; const n0=P.inv.length; g.panelAct('tok',{k:'leg'}); const leg=P.inv.length===n0+1&&P.inv[P.inv.length-1].rar===4; P.dayT=230; const closed=!g.startArena(); P.dayT=60;
+      g.startArena(); g.P.x=8; g.P.y=14; g.checkExit(); return {leg, closed, back:g.W===g.town, tok:P.tokens}""")
+    check('tienda de fichas, horario de arena y salida por la puerta', r['leg'] and r['closed'] and r['back'], r)
+    G("g.startArena(); g.nextWave(); g.P.hp=1e6"); time.sleep(1); pg.screenshot(path=ROOT + '/tests/shot_arena.png'); G("g.enterTown()")
+
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
     for k in ['i', 'k', 'c', 'j', 'h']:

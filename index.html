@@ -37,8 +37,8 @@ button:hover{background:#556}button:disabled{opacity:.4}
 <div class="bar"><div id="hp" style="background:#c33"></div><span id="hpt"></span></div>
 <div class="bar"><div id="mp" style="background:#36c"></div><span id="mpt"></span></div>
 <div class="bar" style="height:8px"><div id="xp" style="background:#db3"></div></div>
-<div id="hinfo"></div><div id="help">WASD mover · Espacio atacar · E usar · 1-4 habilidades · 5/6 pociones<br>I inventario · K habilidades · C fabricar · J misiones · B construir · H casa · 7-0 comida · M música · O opciones · L logros · N montar · E en agua: pescar · 🎮 mando</div></div>
-<div id="log"></div><div id="bar"></div>
+<div id="hinfo"></div><div id="help">WASD mover · Espacio atacar · E usar · 1-4 habilidades · 5/6 pociones<br>I inventario · K habilidades · C fabricar · J misiones · B construir · H casa · 7-0 comida · M música · O opciones · L logros · N montar · Enter hechizo/chat · F1-F4 hechizos · E en agua: pescar · 🎮 mando</div></div>
+<div id="log"></div><input id="chat" placeholder="Escribe un hechizo (exura, exori, utani hur…) o un mensaje y pulsa Enter" style="display:none;position:fixed;left:10px;bottom:40px;width:420px;background:#000c;color:#fe7;border:1px solid #fe7;padding:6px;font-size:13px;z-index:6"><div id="bar"></div>
 <div id="touch"><button style="left:50px;top:0" data-d="0,-1">▲</button><button style="left:0;top:50px" data-d="-1,0">◀</button><button style="left:100px;top:50px" data-d="1,0">▶</button><button style="left:50px;top:100px" data-d="0,1">▼</button></div>
 <div id="tact"><button data-k=" ">⚔</button><button data-k="e">E</button><button data-k="i">🎒</button></div>
 <div class="panel" id="panel"></div><div id="tip"></div>
@@ -47,4 +47,7 @@ button:hover{background:#556}button:disabled{opacity:.4}
 <button data-c="guerrero" style="width:200px">⚔ Guerrero<br><small>Fuerza y vitalidad. Golpe Poderoso.</small></button>
 <button data-c="mago" style="width:200px">🔥 Mago<br><small>Báculo, maná. Bola de Fuego.</small></button>
 <button data-c="arquero" style="width:200px">🏹 Arquero<br><small>Arco a distancia, agilidad y crítico.</small></button></div></div>
-<script src="game.js"></script></body></html>
+<script src="game.js"></script>
+<script>
+const chatEl=document.getElementById("chat");chatEl.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=chatEl.value;chatEl.style.display="none";chatEl.blur();if(v.trim())__game.castSpell(v);e.preventDefault();}else if(e.key==="Escape"){chatEl.style.display="none";chatEl.blur();}e.stopPropagation();});
+</script></body></html>
