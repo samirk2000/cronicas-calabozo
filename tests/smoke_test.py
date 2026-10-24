@@ -473,6 +473,21 @@ with sync_playwright() as p:
             for m in _re.finditer(banned, line, _re.I): left.append(f'{f}:{i}:{m.group(0)}')
     check('sin nombres de franquicias ajenas en el código/README (salvo la tabla de migración)', not left, left[:10])
 
+    # Iteración 11: idioma, sprites
+    r = G("""g.enterTown(); g.openPanel('options'); const html=document.getElementById('panel').innerHTML; g.panelAct('lang',{k:'en'}); I18N.trAll(); const h2=document.querySelector('#panel h2').textContent; g.closePanel();
+      const sp=/\\b(de|del|la|las|los|con|para|tus|una|por|sin|más|está|hoy|cada)\\b|[ñ¡¿]/i; let tot=0, bad=[]; const P=g.P; P.guildHall=1;
+      for(const pn of ['inv','skills','craft','quests','house','ach','worldmap','keys','enchant','options']){ g.openPanel(pn); I18N.trAll(); const w=document.createTreeWalker(document.getElementById('panel'),NodeFilter.SHOW_TEXT); let n; while(n=w.nextNode()){ const v=n.nodeValue.trim(); if(!v) continue; tot++; if(sp.test(v) && !/Español|Vientoalba|Coloso|Espadanegra/.test(v)) bad.push(v.slice(0,60)); } g.closePanel(); }
+      g.update(0.05); I18N.trAll(); const hud=document.getElementById('hud').textContent; const canvasTr=I18N.tr('Ciudad de Valdoria'); const ls=localStorage.getItem('cc_lang');
+      g.openPanel('options'); g.panelAct('lang',{k:'es'}); I18N.trAll(); const back=document.querySelector('#panel h2').textContent; g.closePanel(); const back2=I18N.tr('Ciudad de Valdoria');
+      return {opt:html.includes('English'), h2, tot, bad:bad.slice(0,8), nbad:bad.length, canvasTr, ls, back, back2, size:I18N.size, help:document.getElementById('help').textContent.slice(0,30)}""")
+    check('idioma: opción English traduce paneles, HUD y canvas; Español restaura; se recuerda', r['opt'] and r['h2']=='⚙ Options' and r['tot']>150 and r['nbad']<=3 and r['canvasTr']=='City of Valdoria' and r['ls']=='en' and r['back']=='⚙ Opciones' and r['back2']=='Ciudad de Valdoria' and r['size']>=850, r)
+    r = G("""const P=g.P; g.enterFloor(4); g.closePanel(); const S=g.sprStats; for(let i=0;i<20;i++) g.render(); const h0=S.hit, m0=S.miss; for(let i=0;i<60;i++) g.render(); const dh=S.hit-h0, dm=S.miss-m0;
+      const T=on=>{ g.spriteCache=on; const t=performance.now(); for(let i=0;i<3000;i++) g.drawChar(100+(i%7),100,'#c33',[1,0],{weapon:'#ccc',wrar:2,helm:'#888',legs:'#334',trim:'#fc6',hair:'#432',moving:i%2==0}); return performance.now()-t; };
+      T(true); const on=T(true), off=T(false); g.spriteCache=true; return {dh,dm,size:g.SPR.size, on:+on.toFixed(1), off:+off.toFixed(1)}""")
+    print('   sprites (3000 personajes, ms):', r)
+    check('caché de sprites: casi todo son aciertos, tamaño acotado y dibujar personajes es más rápido', r['dh']>r['dm']*5 and r['size']<=800 and r['on']<r['off'], r)
+    G("g.enterTown(); g.closePanel()")
+
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
     for k in ['i', 'k', 'c', 'j', 'h']:
@@ -523,6 +538,41 @@ with sync_playwright() as p:
     m.tap('#menu [data-menu=i]'); time.sleep(.1); r1 = M("return g.panel"); m.tap('#panel [data-act=close]'); time.sleep(.1); r2 = M("return g.panel")
     check('móvil: abrir y cerrar paneles con toques', r1=='inv' and not r2, [r1, r2])
     m.screenshot(path=ROOT + '/tests/shot_mobile.png'); ctx.close()
+
+    # Título, intro, tocar para moverse y mantener pulsado
+    ctx2 = b.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+    t = ctx2.new_page(); t.on('pageerror', lambda e: errs.append('título: ' + str(e)))
+    t.goto('file://' + ROOT + '/index.html'); t.evaluate("localStorage.clear()"); t.reload(); time.sleep(1.2)
+    T2 = lambda js: t.evaluate("(()=>{const g=__game;" + js + "})()")
+    r = T2("""const c=document.getElementById('logo'); const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; let col=new Set(); for(let i=0;i<d.length;i+=4*331) col.add(d[i]>>4|(d[i+1]>>4)<<4|(d[i+2]>>4)<<8);
+      return {w:c.width, frames:g.titleFx.frames, intro:g.titleFx.introT, colors:col.size, lore:g.LORE.length, btn:!!document.getElementById('bnew').offsetParent}""")
+    check('título: logo procedural animado e intro de la historia en marcha, botones accesibles', r['w']<=390 and r['frames']>20 and r['intro']>0.5 and r['colors']>40 and r['lore']>=5 and r['btn'], r)
+    t.tap('#blang'); time.sleep(.2)
+    r = T2("""I18N.trAll(); return {lang:I18N.lang, btn:document.getElementById('bnew').textContent, lbl:document.getElementById('blang').textContent}""")
+    check('título: botón de idioma cambia a inglés al instante', r['lang']=='en' and r['btn']=='New game' and 'Español' in r['lbl'], r)
+    t.tap('#blang'); t.screenshot(path=ROOT + '/tests/shot_title.png')
+    T2("g.titleFx.introT=15.9; return 1"); time.sleep(.4); t.reload(); time.sleep(.5)
+    r = T2("const a=g.titleFx.introT; g.replayIntro(); return {seen:a>=16, replay:g.titleFx.introT<1}")
+    check('la intro se ve una vez y se puede repetir', r['seen'] and r['replay'], r)
+    t.tap('#bnew'); time.sleep(.2); t.tap('#cls [data-c=guerrero]'); time.sleep(.4)
+    def tile_xy(tx, ty):
+        return T2(f"const r=document.getElementById('c').getBoundingClientRect(), cv=document.getElementById('c'); const [cx0,cy0]=g.cam; return [r.left+(({tx})*32-cx0+16)*r.width/cv.width, r.top+(({ty})*32-cy0+16)*r.height/cv.height]")
+    r = T2("const P=g.P; g.closePanel(); g.render(); let gx=P.x, gy=P.y; for(const [dx,dy] of [[3,0],[-3,0],[0,3],[0,-3],[2,2]]) if(!g.solidAt(P.x+dx,P.y+dy)&&!g.town.npcs.some(n=>n.x===P.x+dx&&n.y===P.y+dy)){gx=P.x+dx;gy=P.y+dy;break} return [gx,gy]")
+    gx, gy = r; x, y = tile_xy(gx, gy); t.touchscreen.tap(x, y); time.sleep(.1)
+    r = T2(f"const P=g.P; const goal=!!g.tapGoal; for(let i=0;i<200&&(P.x!=={gx}||P.y!=={gy});i++) g.update(0.05); return {{goal, x:P.x, y:P.y}}")
+    check('tocar el suelo camina hasta la casilla (A*)', r['goal'] and r['x']==gx and r['y']==gy, r)
+    r = T2("""const P=g.P; const n=g.town.npcs.find(n=>n.role==='quest'); g.closePanel(); const res=g.tapAt(n.x,n.y); for(let i=0;i<400&&!g.panel;i++) g.update(0.05); const p=g.panel; g.closePanel(); return {res, p, d:Math.abs(P.x-n.x)+Math.abs(P.y-n.y)}""")
+    check('tocar un NPC camina hasta él y abre su diálogo', r['res']=='move' and r['p']=='npc' and r['d']==1, r)
+    r = T2("""g.enterFloor(2); const P=g.P; g.ents.length=0; let pos=null; for(const [dx,dy] of [[2,0],[-2,0],[0,2],[0,-2]]) if(!g.solidAt(P.x+dx,P.y+dy,true)){pos=[P.x+dx,P.y+dy];break} const e=g.spawnEnemy(g.EN[1],pos[0],pos[1],2,false); e.cd=99; e.mcd=99; e.spd=99; g.render(); return pos""")
+    ex, ey = r; x, y = tile_xy(ex, ey)
+    T2(f"const cv=document.getElementById('c'); const mk=()=>new Touch({{identifier:1,target:cv,clientX:{x},clientY:{y}}}); cv.dispatchEvent(new TouchEvent('touchstart',{{touches:[mk()],targetTouches:[mk()],changedTouches:[mk()],cancelable:true,bubbles:true}})); window.__lp=()=>cv.dispatchEvent(new TouchEvent('touchend',{{touches:[],targetTouches:[],changedTouches:[mk()],cancelable:true,bubbles:true}})); return 1")
+    time.sleep(.7); T2("window.__lp(); return 1")
+    r = T2("const tip=document.getElementById('tip'); return {vis:getComputedStyle(tip).display!=='none', txt:tip.textContent, goal:!!g.tapGoal}")
+    check('mantener pulsado muestra información (nombre, nivel, PV) sin moverse', r['vis'] and ('PV' in r['txt'] or 'HP' in r['txt']) and not r['goal'], r)
+    t.screenshot(path=ROOT + '/tests/shot_longpress.png')
+    r = T2("const L=g.tileInfo(g.P.x,g.P.y).join('|'); return L")
+    check('información de la casilla del jugador', 'Nv' in r, r)
+    ctx2.close()
 
     check('sin errores de JS', not errs, errs)
     b.close()

@@ -129,3 +129,9 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Tutorial contextual** para los primeros minutos (9 pasos: moverse, hablar con Noa, recolectar, inventario, salir, luchar, subir de nivel, construir y la ayuda). Se puede saltar y repetir desde la ayuda, y al terminarlo da 50 de oro.
 - **Ayuda de teclas con `?`** (también con el botón ❓): muestra todas las teclas agrupadas, incluido el mando.
 - **Móvil**: hay una barra de menú táctil arriba. En pantallas de 390 px los paneles ocupan todo el ancho, el botón «Cerrar» queda fijo, no hay scroll horizontal y los botones son más grandes.
+
+## Novedades (iteración 11)
+- **English / Español**: se cambia en ⚙ Opciones o con el botón 🌐 de la pantalla de título, y el juego lo recuerda. Las cadenas pasan por una tabla de traducción (`i18n_table.js`, unas 870 frases y 140 palabras) y un traductor (`i18n.js`). Este traduce paneles, HUD, registro, tutorial, textos del canvas (`fillText`) y diálogos (`alert`/`confirm`) al mostrarlos. El código sigue en español; para añadir un idioma basta otra tabla.
+- **Móvil**: toca el suelo para caminar hasta allí (A*). Si tocas un NPC, un recurso o un cofre, caminas hasta él y lo usas; si tocas un enemigo, lo fijas como objetivo. **Mantén pulsado** (0,5 s) sobre una casilla para ver su información: enemigo con nivel y PV, NPC con horario, aliado, botín, mueble con su confort o terreno.
+- **Caché de sprites**: los personajes y los monstruos se dibujan una vez por fotograma de animación en un canvas aparte y luego solo se copian. Dibujar 3000 personajes pasa de unos 44–53 ms a unos 20 ms.
+- **Pantalla de título nueva**: logo procedural original (la Torre de Valdoria con su luz, la ciudad, brasas, una espada y el título dorado) y una **intro animada** de cinco líneas sobre el origen de Valdoria. Se ve una vez y se puede repetir con «📜 Ver intro».

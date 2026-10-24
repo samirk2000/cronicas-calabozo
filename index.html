@@ -61,6 +61,11 @@ kbd{display:inline-block;min-width:22px;padding:1px 5px;background:#334;border:1
  #title h1{font-size:30px;text-align:center}#title button{font-size:15px;padding:8px 16px}#cls button{width:min(300px,90vw)!important}
  #touch{bottom:60px;left:10px}#tact{bottom:60px;right:10px}
 }
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#logo{max-width:96vw;border-radius:10px;box-shadow:0 0 40px #f805;margin-bottom:10px}
+.tbtn{display:flex;flex-wrap:wrap;justify-content:center}.tsmall button{font-size:13px!important;padding:5px 12px!important;opacity:.85}
+.thint{font-size:12px;color:#aaa;display:none}body.mobile .thint{display:block}
+#title{animation:tfade 1.2s ease-out}@keyframes tfade{from{opacity:0}to{opacity:1}}
 </style></head><body>
 <canvas id="c"></canvas><canvas id="mm" width="150" height="150"></canvas>
 <div id="hud"><div id="hname"></div>
@@ -72,12 +77,12 @@ kbd{display:inline-block;min-width:22px;padding:1px 5px;background:#334;border:1
 <div id="touch"><button style="left:50px;top:0" data-d="0,-1">▲</button><button style="left:0;top:50px" data-d="-1,0">◀</button><button style="left:100px;top:50px" data-d="1,0">▶</button><button style="left:50px;top:100px" data-d="0,1">▼</button></div>
 <div id="tact"><button data-k=" ">⚔</button><button data-k="e">E</button><button data-k="i">🎒</button></div>
 <div id="tut"></div><button id="qhelp" data-menu="?" title="Teclas (?)">❓</button><div id="menu"><button data-menu="i">🎒</button><button data-menu="k">✨</button><button data-menu="c">🔨</button><button data-menu="j">📜</button><button data-menu="h">🏠</button><button data-menu="b">🧱</button><button data-menu="map">🗺</button><button data-menu="l">🏆</button><button data-menu="n">🐴</button><button data-menu="5">❤</button><button data-menu="6">💧</button><button data-menu="enter">💬</button><button data-menu="o">⚙</button><button data-menu="?">❓</button></div><div class="panel" id="panel"></div><div id="tip"></div>
-<div id="title"><h1>Crónicas del Calabozo</h1><p>Un RPG de mazmorras, oficios y hogar</p><button id="bcont">Continuar</button><button id="bnew">Nueva partida</button><button id="bimp">Importar partida</button><input type="file" id="fimp" accept=".txt" style="display:none">
+<div id="title"><h1 class="sr">Crónicas del Calabozo</h1><canvas id="logo" width="760" height="342"></canvas><div class="tbtn"><button id="bcont">Continuar</button><button id="bnew">Nueva partida</button><button id="bimp">Importar partida</button><input type="file" id="fimp" accept=".txt" style="display:none"></div><div class="tsmall"><button id="bintro">📜 Ver intro</button><button id="blang">🌐 English</button></div><p class="thint">Toca: moverte o interactuar · Mantén pulsado: información</p>
 <div id="cls" style="display:none;gap:12px;margin-top:10px">
 <button data-c="guerrero" style="width:200px">⚔ Guerrero<br><small>Fuerza y vitalidad. Golpe Poderoso.</small></button>
 <button data-c="mago" style="width:200px">🔥 Mago<br><small>Báculo, maná. Bola de Fuego.</small></button>
 <button data-c="arquero" style="width:200px">🏹 Arquero<br><small>Arco a distancia, agilidad y crítico.</small></button></div></div>
-<script src="game.js?v=10"></script>
+<script src="i18n_table.js?v=11"></script><script src="i18n.js?v=11"></script><script src="game.js?v=11"></script>
 <script>
 const chatEl=document.getElementById("chat");chatEl.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=chatEl.value;chatEl.style.display="none";chatEl.blur();if(v.trim())__game.castSpell(v);e.preventDefault();}else if(e.key==="Escape"){chatEl.style.display="none";chatEl.blur();}e.stopPropagation();});
 </script></body></html>
