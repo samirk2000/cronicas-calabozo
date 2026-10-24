@@ -1,5 +1,11 @@
 /* Tabla de traducción ES→EN (i18n). Las cadenas del juego están en español y se traducen al mostrarlas (ver i18n.js). */
 const I18N_EN = {
+"💡 ¡Vida baja! Pulsa 5 para beber una poción de vida (o retírate).": "💡 Low health! Press 5 to drink a health potion (or retreat).",
+"💡 ¡Vida baja! Pulsa 5 para beber una poción de vida (o retírate": "💡 Low health! Press 5 to drink a health potion (or retreat",
+"Pulsa 5: poción": "Press 5: potion",
+"🔒 Aprende en K": "🔒 Learn in K",
+"Entrega la misión a Noa (E).": "Turn in the quest to Noa (E).",
+"Entrega la misión a Noa (E)": "Turn in the quest to Noa (E)",
 "! +3 puntos de estado, +1 punto de habilidad": "! +3 stat points, +1 skill point",
 "! Pulsa N para montar": "! Press N to ride",
 "% vida/daño": "% health/damage",

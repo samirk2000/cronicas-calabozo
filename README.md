@@ -142,3 +142,11 @@ En móvil aparecen una cruceta y botones táctiles.
 - Caché de sprites para muebles pesados (HEAVY_BLOCKS) y botín en el suelo.
 - Biomas profundos (piso 41+): Jardín de Cristal Vivo y Ciudad Sumergida, alternando cada 10 pisos, cada uno con 5 enemigos nuevos y 2 jefes (sufijo +N después del piso 60).
 - Renacimiento/prestigio (nivel 40 + piso 40, en el templo): puntos para 6 bonos permanentes; se conservan equipo, oro, casa, mascotas, aliados e historia.
+
+## Iteración 13 — pulido, sensación y balance
+- Pixel art: contorno oscuro, sombreado, cinturón, flequillo, brillo en los ojos; animación de reposo (respiración + parpadeo, 8 fotogramas en caché). Monstruos con más detalle (slime, rata, gólem, fantasma, jefe), respiración y aplastamiento al recibir golpe.
+- Impacto: estela del tajo, chispas, retroceso del enemigo, pausa de impacto (críticos/muertes), números con "pop" y contorno, viñeta roja al recibir daño.
+- UI: tema unificado (paneles, botones, ranuras), iconos pixel art procedurales (armas por tipo, armaduras, materiales, comida, pociones) con contorno.
+- Sonido: 22 efectos con variantes y tono aleatorio (golpe según monstruo, crítico, tajo, monedas, equipar, cofre, error, magia...).
+- Primeros 15 min: flecha guía del tutorial (Noa, árbol, salida, monstruo), objetivo de misión en el HUD, candado en habilidades no aprendidas, HUD de teclas compacto, aviso de vida baja, escaleras de la torre entran directo al piso 1 (antes pedía E y un panel).
+- Balance: curva de XP 45·nv^1.75, menos escalado de estadísticas y objetos, botín/oro reducidos, enemigos +escalado por piso y +8% por bloque de 5 pisos, bonos apilados con rendimiento decreciente (`dimBonus`), sumideros de oro (mejoras, pociones, mascotas/monturas/aliados x2, muerte 15%). Ver `tests/balance_sim.py` y `tests/balance_{antes,despues}.json`.

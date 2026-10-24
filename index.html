@@ -66,6 +66,21 @@ kbd{display:inline-block;min-width:22px;padding:1px 5px;background:#334;border:1
 .tbtn{display:flex;flex-wrap:wrap;justify-content:center}.tsmall button{font-size:13px!important;padding:5px 12px!important;opacity:.85}
 .thint{font-size:12px;color:#aaa;display:none}body.mobile .thint{display:block}
 #title{animation:tfade 1.2s ease-out}@keyframes tfade{from{opacity:0}to{opacity:1}}
+
+/* Tema unificado v13 */
+.panel{background:linear-gradient(180deg,#221d31f7,#131019f7)!important;border:2px solid #b8955a!important;border-radius:12px!important;box-shadow:0 0 0 1px #000,0 0 0 4px #3a2c18,0 14px 44px #000d,inset 0 0 40px #0007!important}
+.panel h2{color:#ffd77a;font-family:Georgia,'Times New Roman',serif;letter-spacing:.5px;border-bottom:1px solid #b8955a66;padding-bottom:7px;text-shadow:0 2px #000}
+.panel h3{color:#e8c98a;font-size:14px;margin:12px 0 6px;border-left:3px solid #b8955a;padding-left:7px}
+.panel::-webkit-scrollbar{width:9px}.panel::-webkit-scrollbar-thumb{background:#b8955a88;border-radius:5px}.panel::-webkit-scrollbar-track{background:#0003}
+button{background:linear-gradient(#433f5c,#2a273b);border:1px solid #8a7a5a;color:#f3ead8;border-radius:6px;box-shadow:inset 0 1px #ffffff22,0 1px 2px #0009;transition:filter .1s,transform .05s}
+button:hover{background:linear-gradient(#433f5c,#2a273b);filter:brightness(1.3)}button:active{transform:translateY(1px)}button:disabled{filter:grayscale(.8)}
+.it{background:radial-gradient(circle at 50% 35%,#34304a,#1a1824)!important;border-radius:7px!important;text-align:center;transition:transform .08s}.it:hover{transform:scale(1.06)}
+.it.r1{box-shadow:0 0 6px #5e57}.it.r2{box-shadow:0 0 7px #5af8}.it.r3{box-shadow:0 0 8px #c7f9}.it.r4{box-shadow:0 0 10px #fb3a}
+.ico{width:24px;height:24px;image-rendering:pixelated;vertical-align:middle}.ico.big{width:28px;height:28px}.ico.z{opacity:.35}
+.mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px;max-width:310px}
+.chip{display:flex;align-items:center;gap:4px;background:#0004;border:1px solid #ffffff14;border-radius:6px;padding:2px 6px;font-size:11px}.chip b{margin-left:auto;color:#ffd77a}.chip.z{opacity:.4}.chip.in{display:inline-flex;margin:2px}
+.slot{background:linear-gradient(#2a2740,#17151f)!important;border-color:#8a7a5a!important;box-shadow:inset 0 0 8px #000a}.slot.lock{opacity:.45;filter:grayscale(1)}.slot .lk{position:absolute;right:2px;top:1px;font-style:normal;font-size:10px}
+#help.mini{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}#help.mini br{display:none}
 </style></head><body>
 <canvas id="c"></canvas><canvas id="mm" width="150" height="150"></canvas>
 <div id="hud"><div id="hname"></div>
@@ -82,7 +97,7 @@ kbd{display:inline-block;min-width:22px;padding:1px 5px;background:#334;border:1
 <button data-c="guerrero" style="width:200px">⚔ Guerrero<br><small>Fuerza y vitalidad. Golpe Poderoso.</small></button>
 <button data-c="mago" style="width:200px">🔥 Mago<br><small>Báculo, maná. Bola de Fuego.</small></button>
 <button data-c="arquero" style="width:200px">🏹 Arquero<br><small>Arco a distancia, agilidad y crítico.</small></button></div></div>
-<script src="i18n_table.js?v=12"></script><script src="i18n.js?v=12"></script><script src="game.js?v=12"></script>
+<script src="i18n_table.js?v=13"></script><script src="i18n.js?v=13"></script><script src="game.js?v=13"></script>
 <script>
 const chatEl=document.getElementById("chat");chatEl.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=chatEl.value;chatEl.style.display="none";chatEl.blur();if(v.trim())__game.castSpell(v);e.preventDefault();}else if(e.key==="Escape"){chatEl.style.display="none";chatEl.blur();}e.stopPropagation();});
 </script></body></html>

@@ -222,7 +222,7 @@ with sync_playwright() as p:
       g.panelAct('dtake',{uid:'55555'}); g.panelAct('takemats',{}); P.hp=1;
       g.panelAct('theal',{}); return {roles, b1, g1, afterDie, blessed, blessKeep, inDep, mStored, persist, back:Q.inv.some(i=>i.uid===55555), mad:Q.mats.madera>=7, healed:Q.hp===undefined||true};""")
     check('NPCs de banco, depósito, templo, establo y reclutas', all(x in r['roles'] for x in ['bank','depot','temple','stable','recruit']), r['roles'])
-    check('banco protege el oro al morir', r['b1']==1000 and r['g1']==0 and r['afterDie']['bank']==1000 and r['afterDie']['gold']==450, r)
+    check('banco protege el oro al morir', r['b1']==1000 and r['g1']==0 and r['afterDie']['bank']==1000 and r['afterDie']['gold']==425, r)
     check('bendición del templo evita pérdida', r['blessed']==1 and r['blessKeep'], r)
     check('depósito guarda objetos y materiales (persistente)', r['inDep'] and r['mStored'] and r['persist'] and r['back'] and r['mad'], r)
 
@@ -325,7 +325,7 @@ with sync_playwright() as p:
       const weap=P.inv.some(i=>i.slot==='arma'&&i.rar===1); g.questEvent('build',null,6); g.panelAct('turnin',{}); const cama=P.blocks.cama>=1; g.panelAct('turnin',{});
       return {start, need, lvl:P.lvl, gold:P.gold, items:P.inv.length-inv0, kit, weap, cama, q:P.q, sp:P.sp, kp:P.kp};""")
     check('inicio generoso: 100 oro, 5 pociones, 2 panes', r['start']['gold']==100 and r['start']['pv']==5 and r['start']['pan']==2, r['start'])
-    check('progresión temprana: ~30 kills + 4 misiones → nivel ≥6, oro ≥300, botín y premios', r['lvl']>=6 and r['gold']>=300 and r['items']>=4 and r['kit'] and r['weap'] and r['cama'] and r['q']==4, r)
+    check('progresión temprana (rebalanceada): ~30 kills + 4 misiones → nivel 3–6, oro ≥300, botín y premios', 3<=r['lvl']<=6 and r['gold']>=300 and r['items']>=4 and r['kit'] and r['weap'] and r['cama'] and r['q']==4, r)
 
     # 32 Horarios de NPCs y taberna
     r = G("""g.enterTown(); const P=g.P; P.x=20; P.y=12; P.fx=20; P.fy=12; const gaspar=g.town.npcs.find(n=>n.role==='shop'), tav=g.town.npcs.find(n=>n.role==='tavern');
@@ -513,6 +513,47 @@ with sync_playwright() as p:
     check('prestigio: bonus permanentes (vida, daño, XP) en la tienda del templo y persisten al guardar', r['hp'][1]>r['hp'][0] and r['atk'][1]>r['atk'][0] and r['lowPts'] is False and r['xpPerk']>=10 and r['tb'] and r['pnl']=='rebirth' and r['ok'] and r['keep'], r)
     G("const P=g.P; P.lvl=12; P.hp=g.maxHp(); g.enterTown(); g.closePanel()")
 
+    # ---- Iteración 13: pulido, sensación y balance ----
+    r = G("""g.closePanel(); g.enterTown(); const P=g.P; g.openPanel('inv'); const el=document.getElementById('panel'); const n=el.querySelectorAll('img.ico').length; g.closePanel();
+      const a=g.iconURL('madera'), b=g.iconURL('piedra'); const k=g.itemKind({slot:'arma',name:'Hacha del Lobo'}), kb=g.itemKind({slot:'casco',name:'Yelmo X'});
+      g.openPanel('craft'); const nc=document.getElementById('panel').querySelectorAll('img.ico').length; g.closePanel();
+      return {n, nc, data:a.startsWith('data:image/png'), diff:a!==b, k, kb, cached:g.ICONS.size>5}""")
+    check('iconos procedurales para objetos y materiales (inventario y fabricación)', r['n']>=10 and r['data'] and r['diff'] and r['k']=='Hacha' and r['kb']=='casco' and r['cached'], r)
+    r = G("""const P=g.P; g.enterFloor(2); g.ents.length=0; const n=Object.keys(g.SFX).length; const L=g.sndLog;
+      const s=g.spawnEnemy({n:'Slime',col:'#5d5',sh:'slime',hp:500,atk:1,spd:1},P.x+3,P.y,2,false); const gm=g.spawnEnemy({n:'Gólem',col:'#888',sh:'golem',hp:500,atk:1,spd:1},P.x+4,P.y,2,false);
+      const mr=Math.random; Math.random=()=>0.99; g.damageEnemy(s,5); const a=L[L.length-1]; g.damageEnemy(gm,5); const b=L[L.length-1]; Math.random=()=>0.0; g.damageEnemy(s,5); const c=L[L.length-1]; Math.random=mr;
+      g.ents.length=0; g.P.atkCd=0; const e=g.spawnEnemy(g.EN[0],P.x+1,P.y,2,false); e.hp=e.mhp=1e6; g.P.dir=[1,0]; g.playerAttack(true); const sw=L.includes('swing');
+      g.drops.push({x:P.x,y:P.y,gold:5}); g.pickup(); const coin=L.slice(-3).includes('coin')?'coin':L[L.length-1]; g.ents.length=0;
+      const kinds=new Set(); for(const k in g.SFX) kinds.add(g.SFX[k].length); const variants=Object.values(g.SFX).filter(v=>v.length>1).length;
+      return {n,a,b,c,sw,coin,variants}""")
+    check('sonidos variados: golpe según monstruo (slime/gólem), crítico, tajo, monedas, variantes', r['n']>=20 and r['a']=='squish' and r['b']=='clank' and r['c']=='crit' and r['sw'] and r['coin']=='coin' and r['variants']>=8, r)
+    r = G("""const P=g.P; g.ents.length=0; g.hitstop=0; const e=g.spawnEnemy(g.EN[0],P.x+2,P.y,2,false); e.hp=e.mhp=1e6; const mr=Math.random; Math.random=()=>0.0; const p0=g.P&&0; g.damageEnemy(e,10); Math.random=mr;
+      const hs=g.hitstop, kb=e.kbT!=null && e.kbD[0]===1; g.hitstop=0; e.hp=1; g.damageEnemy(e,10000); const hs2=g.hitstop; g.hitstop=0;
+      g.P.swing=.15; g.render(); g.P.swing=0; const e2=g.spawnEnemy(g.EN[0],P.x+2,P.y,2,false); e2.flash=.1; g.render(); g.ents.length=0; return {hs, kb, hs2}""")
+    check('impacto: retroceso, pausa de impacto en críticos y muertes, estela del tajo', r['hs']>0 and r['kb'] and r['hs2']>0, r)
+    r = G("""g.spriteCache=true; const keys0=new Set(g.SPR.keys()); const P=g.P; const ks=[]; for(const t of [0.1,0.9,1.7,2.3]){ g.P.flash=0; g.render(); } 
+      const f=[...g.SPR.keys()].filter(k=>k.startsWith('c|')&&!keys0.has(k)); const idle=new Set(f.map(k=>k.split('|')[3])); return {n:f.length, idle:[...idle]}""")
+    # fuerza varios fotogramas de reposo avanzando el tiempo
+    for _ in range(4): G("g.update(0.13); g.render(); return 1")
+    r2 = G("""return [...new Set([...g.SPR.keys()].filter(k=>k.startsWith('c|')).map(k=>k.split('|')[3]))].filter(x=>+x>=8).length""")
+    check('animación de reposo (respiración/parpadeo) con varios fotogramas en caché', r2>=2, [r, r2])
+    r = G("""const P=g.P; const o={need10:g.xpNeed(10), need30:g.xpNeed(30)}; g.enterFloor(5); const h5=g.spawnEnemy(g.EN[0],1,1,5,false).mhp; const h10=g.spawnEnemy(g.EN[0],1,1,10,false).mhp; const h6=g.spawnEnemy(g.EN[0],1,1,6,false).mhp; g.ents.length=0;
+      const sv={perks:P.perks, pr:P.prestige.perks, m:P.sk.maestria, b:{...P.buffs}}; P.perks={dmg:.15,xp:.2}; P.prestige.perks={dmg:10,xp:10,hp:10,gold:10}; P.sk.maestria=5; P.buffs.fuerza=99; P.buffs.sabiduria=99;
+      const ab=g.atkBonus(); const lv=P.lvl, xp=P.xp; P.lvl=300; P.xp=0; g.gainXp(1000); const xm=P.xp/1000; P.lvl=lv; P.xp=xp;
+      P.perks=sv.perks; P.prestige.perks=sv.pr; P.sk.maestria=sv.m; P.buffs=sv.b; P.allyQ={bruno:{done:1}}; const am=g.allyMult('bruno'); P.allyQ={};
+      return {...o, h5, h10, blk:+(h6/h5).toFixed(2), ab, xm, am, dim:g.dimBonus(5,.5,1)}""")
+    check('balance: curva de XP más lenta, PV por piso con salto cada 5 pisos, bonos apilados con tope', r['need10']>=2400 and r['need30']>=17000 and r['h10']>r['h5']*1.7 and r['blk']>=1.12 and r['ab']<=1 and r['xm']<=1.9 and r['am']<=1.5 and r['dim']==1, r)
+    r = G("""const P=g.P; const it=g.genItem('arma',20,4,'Espada'); const c=g.enchantCost(Object.assign(it,{plus:5})).oro; P.lvl=20; g.enterTown(); g.openPanel('shop'); const h=document.getElementById('panel').innerHTML; g.closePanel(); return {c, atk:it.st.atk, pot:/Poción de vida \\((\\d+) oro/.exec(h)||/\\((\\d+) oro\\)/.exec(h)}""")
+    check('sumideros de oro: mejoras +5 cuestan miles, pociones escalan con el nivel; objetos menos inflados', r['c']>=8000 and r['atk']<=85, r)
+    r = G("""const P=g.P; P.tut=1; P.tutF={}; g.enterTown(); P.x=20; P.y=12; const t1=g.tutTarget(); const noa=g.town.npcs.find(n=>n.id==='noa'); P.tutF.npc=1; g.tutStep(); const t2=g.tutTarget(); const tt=t2&&g.gt(g.W,t2[0],t2[1]);
+      P.tutF.gather=1; P.tutF.inv=1; g.tutStep(); const t3=g.tutTarget(); const te=t3&&g.gt(g.W,t3[0],t3[1]); g.render();
+      g.enterFloor(1); P.tutF={}; P.tut=99; g.closePanel(); P.cons.pocion_vida=3; P.tutF={}; P.hp=1; const n0=g.P.tutF.lowhp; g.lowHpHint(); const once=P.tutF.lowhp; P.hp=g.maxHp(); g.enterTown();
+      const help=document.getElementById('help').className; return {noa:!!t1&&t1[0]===noa.x&&t1[1]===noa.y, tree:[g.T.TREE,g.T.ROCK].includes(tt), exit:[g.T.DOWN,g.T.EXIT].includes(te), once, help}""")
+    check('primeros minutos: flecha guía hacia Noa, árbol y salida; aviso de vida baja; HUD de teclas compacto', r['noa'] and r['tree'] and r['exit'] and r['once']==1 and 'mini' in r['help'], r)
+    G("g.closePanel(); const P=g.P; P.lvl=1; P.q=0; P.qp=0; for(const k in P.sk) P.sk[k]=0; return 1"); time.sleep(.3)
+    r = G("""const P=g.P; const b=document.getElementById('bar').innerHTML; P.lvl=Math.max(P.lvl,1); return {lock:(b.match(/slot lock/g)||[]).length, quest:document.getElementById('hinfo').innerHTML.includes('→')}""")
+    check('barra: habilidades no aprendidas muestran candado; HUD muestra el objetivo de la misión', r['lock']>=3 and r['quest'], r)
+
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
     for k in ['i', 'k', 'c', 'j', 'h']:
@@ -606,6 +647,34 @@ with sync_playwright() as p:
     check('mantener y arrastrar camina sin parar en esa dirección y se detiene al soltar', r['hold'] and r['dir']==list(hd) and r['moved']>=2 and r2['stopped'] and not r2['hold'], [r, r2])
 
     ctx2.close()
+
+    # ---- Simulación de jugador nuevo (teclado/ratón reales, primeros minutos) ----
+    npg = b.new_page(viewport={'width': 1200, 'height': 760})
+    npg.on('pageerror', lambda e: errs.append(str(e))); npg.on('console', lambda m: m.type == 'error' and errs.append(m.text))
+    npg.goto('file://' + ROOT + '/index.html'); npg.evaluate("localStorage.clear()"); npg.reload(); npg.click('#bnew'); time.sleep(.2); npg.click('#cls [data-c=guerrero]'); time.sleep(.4)
+    N = lambda js: npg.evaluate("(()=>{const g=__game;" + js + "})()")
+    sim = {'steps': {}, 'arrow': {}}; T0 = time.time(); vis = N("return getComputedStyle(document.getElementById('tut')).display")
+    for k in ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'] * 2:
+        npg.keyboard.down(k); time.sleep(.3); npg.keyboard.up(k)
+        if N("const t=g.tutStep(); return t?t.id:'-'") != 'move': break
+    sim['steps']['move'] = round(time.time() - T0, 1)
+    for sid in ['talk', 'gather', 'inv', 'out', 'fight']:
+        t1 = time.time(); arrow = False
+        while time.time() - t1 < 45:
+            cur = N("const t=g.tutStep(); return t?t.id:'-'")
+            if cur != sid: break
+            if sid == 'inv':
+                npg.keyboard.press('Escape'); npg.keyboard.press('i'); time.sleep(.3); continue
+            if sid == 'fight': N("g.P.hp=Math.max(g.P.hp,g.maxHp()*.6); return 1")  # el jugador bebe pociones
+            if N("return !!g.panel"): npg.keyboard.press('Escape'); time.sleep(.1)
+            tg = N("const t=g.tutTarget(); return t?[t[0],t[1]]:null")
+            if tg: arrow = True; N(f"if(!g.tapGoal) g.tapAt({tg[0]},{tg[1]}); return 1")
+            time.sleep(.35)
+        sim['steps'][sid] = round(time.time() - t1, 1); sim['arrow'][sid] = arrow
+    npg.keyboard.press('Escape')
+    sim['total'] = round(time.time() - T0, 1); sim['final'] = N("const t=g.tutStep(); return {step:t?t.id:'-', lvl:g.P.lvl, kills:g.P.kills, deaths:g.P.deaths}")
+    npg.screenshot(path=ROOT + '/tests/shots/jugador_nuevo.png'); npg.close()
+    check('jugador nuevo simulado sigue las flechas y completa movimiento→hablar→recolectar→inventario→salir→combate', vis == 'block' and all(sim['arrow'][k] for k in ['talk', 'gather', 'out', 'fight']) and sim['final']['kills'] >= 1 and all(v < 45 for v in sim['steps'].values()), sim)
 
     check('sin errores de JS', not errs, errs)
     b.close()
