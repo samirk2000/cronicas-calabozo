@@ -64,3 +64,18 @@ En móvil aparecen una cruceta y botones táctiles.
 - **Amistad con NPCs** (E sobre Eina, Bors, Welf o Hestia): se puede charlar una vez al día y hacer un regalo diario. Los regalos favoritos dan +12 y los demás +4, hasta 10 corazones. Cada NPC da recompensas: Eina oro, puntos de habilidad y un anillo épico; Bors descuentos, pociones y oro; Welf equipo forjado y la *Espada Mágica Crozzo*; Hestia puntos de estado, banquetes y su bendición.
 - **Logros** (L): 19 logros con recompensa en oro.
 - Las pruebas suben a **41** (`python3 tests/smoke_test.py`).
+
+## Novedades (iteración 5)
+- **Cámara limitada** a los bordes del mapa (ya no hay franja oscura) y **minimapa centrado** que muestra NPCs (amarillo) y compañeros (azul).
+- **Ciudad estilo Tibia**: edificios con tejado y estos NPCs:
+  - **Banco**: depositar y retirar oro. El oro del banco no se pierde al morir y da un 1 % de interés diario (máx. 500).
+  - **Depósito**: almacén ilimitado de objetos y materiales.
+  - **Templo**: curación gratis, revivir aliados y una *bendición* que evita la pérdida de oro en la siguiente muerte.
+  - **Establo de Ryu**: mascotas y monturas.
+  - **Bárbara (Reclutas)**: aliados para tu grupo.
+- **Mascotas** que te siguen y pelean: Perro, Gato de la suerte (+25 % de oro), Halcón (ataca a distancia) y Slime (te cura poco a poco).
+- **Monturas** (N para montar o desmontar): Caballo (35 % más rápido) y Lobo gigante (50 % más rápido y +10 % de ataque).
+- **Grupo estilo Grimgar** (hasta 2 aliados): Mogzo (tanque), Merry (sacerdotisa que cura), Yume (arquera), Shihoru (maga) y Ranta (caballero oscuro). Suben de nivel contigo y reciben golpes. Si caen, se reviven en el Templo.
+- **Mercader errante** en el calabozo: aparece siempre en los pisos 2, 5, 8… cuando no son de jefe, y con un 25 % de probabilidad en los demás. Vende 3 objetos de rareza Rara o superior y elixires, y no hay monstruos cerca de él.
+- **Títulos**: en Logros (L) puedes elegir un logro desbloqueado como título, que aparece sobre tu personaje.
+- Las pruebas suben a **53** (`python3 tests/smoke_test.py`).

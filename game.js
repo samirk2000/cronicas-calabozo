@@ -68,7 +68,7 @@ let weather = { type: 'despejado', t: 60, flash: 0 };
 const season = () => SEASONS[Math.floor(((P ? P.day : 1) - 1) / 7) % 4];
 function setWeather(type, t = rnd(60, 120)) { weather.type = type; weather.t = t; if (P) log('Clima: ' + WEATHER_N[type], '#9cf'); }
 function updateSeason(dt) {
-  P.dayT += dt; if (P.dayT >= DAYLEN) { P.dayT = 0; const s0 = season(); P.day++; log('Amanece el día ' + P.day + '.', '#fe8'); if (season() !== s0) { log('¡Comienza ' + season().n + '! ' + season().ico, '#fe8'); setWeather(pick(season().w)); } }
+  P.dayT += dt; if (P.dayT >= DAYLEN) { P.dayT = 0; const s0 = season(); P.day++; log('Amanece el día ' + P.day + '.', '#fe8'); if (P.bank > 0) { const it = Math.min(500, Math.floor(P.bank * .01)); P.bank += it; if (it) log('🏦 Interés bancario: +' + it + ' oro.', '#9e9'); } if (season() !== s0) { log('¡Comienza ' + season().n + '! ' + season().ico, '#fe8'); setWeather(pick(season().w)); } }
   weather.t -= dt; if (weather.t <= 0) setWeather(pick(season().w));
   if (weather.type === 'nieve' && season().n !== 'Invierno') weather.type = 'despejado';
   if (weather.type === 'tormenta') { weather.flash = Math.max(0, weather.flash - dt); if (Math.random() < dt * .08) { weather.flash = .25; if (!W.dark) { shake = 4; snd('boss'); } } }
@@ -248,16 +248,16 @@ function newPlayer() {
     base: { fue: 5, vit: 5, agi: 5, int: 5 }, sp: 0, kp: 0, sk: Object.fromEntries(Object.keys(SKILLS).map(k => [k, 0])),
     inv: [], mats: Object.fromEntries(Object.keys(MATS).map(k => [k, 0])), cons: { pocion_vida: 3, pocion_mana: 1, pan: 0, estofado: 0, tarta: 0, banquete: 0 }, buffs: {}, cls: 'guerrero', gifts: 0, blocks: {},
     eq: { arma: null, armadura: null, casco: null, anillo: null }, cds: {}, atkCd: 0, maxFloor: 1, floor: 0,
-    q: 0, qp: 0, house: 1, day: 1, dayT: 0, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
+    q: 0, qp: 0, house: 1, pets: [], pet: null, mounts: [], mount: null, riding: false, party: [], bank: 0, depot: [], blessed: 0, title: '', trail: [], day: 1, dayT: 0, cana: 0, crafted: 0, harvests: 0, fishCaught: 0, ach: {}, friend: {}, talked: {}, gifted: {}, field: 0, rares: 0, bosses: 0, kills: 0, deaths: 0, flash: 0,
   };
 }
 function stat(k) { let v = P.base[k] || 0; for (const s in P.eq) if (P.eq[s]) v += P.eq[s].st[k] || 0; return v; }
 function maxHp() { return 80 + stat('vit') * 12 + P.lvl * 8 + P.sk.piel * 15; }
 function maxMp() { return 20 + stat('int') * 6 + P.sk.arcano * 15; }
-function atk() { return Math.round((5 + stat('fue') * 2 + stat('atk') + P.lvl) * (1 + P.sk.maestria * .08) * (P.buffs.fuerza > 0 ? 1.25 : 1)); }
+function atk() { return Math.round((5 + stat('fue') * 2 + stat('atk') + P.lvl) * (1 + P.sk.maestria * .08 + (P.riding && P.mount ? MOUNTS[P.mount].atk || 0 : 0)) * (P.buffs.fuerza > 0 ? 1.25 : 1)); }
 function def() { return Math.round((stat('def') + Math.floor(stat('vit') / 2) + P.sk.piel * 3) * (P.buffs.defensa > 0 ? 1.3 : 1)); }
 function crit() { return 5 + stat('agi') * .6 + stat('crit') + (P.cls === 'arquero' ? 8 : 0); }
-function moveTime() { return Math.max(.11, .22 - stat('agi') * .003); }
+function moveTime() { return Math.max(.07, (.22 - stat('agi') * .003) * (P.riding && P.mount ? MOUNTS[P.mount].spd : 1)); }
 function atkTime() { return Math.max(.35, 1 - stat('agi') * .015); }
 function xpNeed(l) { return Math.round(50 * Math.pow(l, 1.6)); }
 
@@ -290,7 +290,18 @@ function genTown() {
     { x: 17, y: 16, n: 'Bors (Mercader)', col: '#da4', role: 'shop', id: 'bors' },
     { x: 23, y: 16, n: 'Welf (Herrero)', col: '#e54', role: 'smith', id: 'welf' },
     { x: 18, y: 7, n: 'Hestia (Diosa)', col: '#fff', role: 'god', id: 'hestia' },
+    { x: 10, y: 5, n: 'Banco de Orario', col: '#2a6', role: 'bank' },
+    { x: 14, y: 5, n: 'Depósito', col: '#865', role: 'depot' },
+    { x: 11, y: 11, n: 'Templo (Sacerdotisa)', col: '#eee', role: 'temple' },
+    { x: 27, y: 20, n: 'Ryu (Establo)', col: '#3a8', role: 'stable' },
+    { x: 16, y: 5, n: 'Bárbara (Reclutas)', col: '#c4c', role: 'recruit' },
   ];
+  const bld = (x0, y0, w, h, col) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) st(m, x, y, T.WALL); m.roofs.push([x0, y0, w, h, col]); };
+  m.roofs = [];
+  for (let y = 3; y < 15; y++) for (let x = 8; x < 16; x++) if (gt(m, x, y) !== T.PATH) st(m, x, y, T.GRASS);
+  bld(9, 3, 3, 2, '#2a6'); bld(13, 3, 3, 2, '#865'); bld(9, 9, 5, 2, '#ddd'); bld(26, 18, 4, 2, '#a63');
+  for (let x = 9; x < 17; x++) st(m, x, 6, T.PATH); for (let y = 6; y < 15; y++) st(m, 15, y, T.PATH); for (let x = 11; x < 15; x++) st(m, x, 12, T.PATH);
+  for (let y = 16; y < 21; y++) st(m, 28, y, T.PATH);
   m.light = 1; return m;
 }
 
@@ -327,6 +338,13 @@ function genFloor(f) {
     const r = pick(rooms.slice(1)), x = ri(r.x, r.x + r.w - 1), y = ri(r.y, r.y + r.h - 1);
     if (gt(m, x, y) !== T.FLOOR || ents.some(e => e.x === x && e.y === y)) continue;
     spawnEnemy(pick(pool), x, y, f, false);
+  }
+  if (!m.boss && (f % 3 === 2 || Math.random() < .25) && rooms.length > 2) {
+    const r = rooms[1 + Math.floor(Math.random() * (rooms.length - 2))]; let mxp = r.cx, myp = r.cy; if (gt(m, mxp, myp) !== T.FLOOR) { mxp = r.x; myp = r.y; } st(m, mxp, myp, T.FLOOR);
+    m.npcs.push({ x: mxp, y: myp, n: 'Mercader errante', col: '#a84', role: 'dmerch' });
+    ents = ents.filter(e => Math.abs(e.x - mxp) + Math.abs(e.y - myp) > 4);
+    m.mstock = [genItem(null, f + 2, ri(2, 3)), genItem(null, f + 2, ri(2, 4)), genItem(null, f + 3, ri(3, 4))];
+    m.mstock.forEach(it => it.price = it.value * 3);
   }
   if (m.boss) spawnEnemy({ n: BOSSES[(f / 5 - 1) % BOSSES.length] + (f > 35 ? ' +' + Math.floor(f / 35) : ''), col: '#b22', sh: 'boss', hp: 400, atk: 14, spd: .55 }, e.cx, e.cy, f, true);
   return m;
@@ -391,6 +409,7 @@ function solidAt(x, y, ignoreEnt) {
   if (W === town && visitors.some(v => v.x === x && v.y === y)) return true;
   if (!ignoreEnt && ents.some(e => e.x === x && e.y === y)) return true;
   if (P && P.x === x && P.y === y && !ignoreEnt) return true;
+  if (!ignoreEnt && comps.some(c => c.x === x && c.y === y && !(c.kind === 'ally' && c.a.down))) return true;
   return false;
 }
 
@@ -425,7 +444,7 @@ function spawnFieldMob(far = 10) {
 function enterField(at) {
   if (!field) field = genField();
   W = field; ents = []; drops = []; projs = []; warns = []; P.floor = 0; P.field = 1; fishing = null;
-  [P.x, P.y] = at || field.entry; P.fx = P.x; P.fy = P.y;
+  [P.x, P.y] = at || field.entry; P.fx = P.x; P.fy = P.y; buildComps();
   for (let i = 0; i < FIELD_MAX; i++) spawnFieldMob(6);
   field.spawnT = 8; log('Sales a las ' + field.name + '. Monstruos salvajes rondan por aquí.', '#9e9'); save();
 }
@@ -440,13 +459,13 @@ function checkExit() {
   P.mt = 0;
 }
 function enterTown(at) {
-  P.field = 0; fishing = null;
+  P.field = 0; fishing = null; 
   W = town; ents = []; drops = []; projs = []; warns = []; P.floor = 0;
-  [P.x, P.y] = at || [20, 6]; P.fx = P.x; P.fy = P.y; log('Has vuelto a ' + W.name + '.', '#9cf'); save();
+  [P.x, P.y] = at || [20, 6]; P.fx = P.x; P.fy = P.y; buildComps(); log('Has vuelto a ' + W.name + '.', '#9cf'); save();
 }
 function enterFloor(f) {
   P.floor = f; P.field = 0; fishing = null; W = genFloor(f); drops = []; projs = []; warns = [];
-  [P.x, P.y] = W.start; P.fx = P.x; P.fy = P.y;
+  [P.x, P.y] = W.start; P.fx = P.x; P.fy = P.y; buildComps();
   if (f > P.maxFloor) P.maxFloor = f;
   questEvent('floor', null, f);
   log('Entras al piso ' + f + (W.boss ? ' — ¡Se siente una presencia terrible!' : '.'), W.boss ? '#f66' : '#fc6');
@@ -465,7 +484,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 function onKey(k) {
   if (k === 'escape') { if (fishing) { fishing = null; return; } if (panel) closePanel(); else if (buildMode) { buildMode = false; } return; }
-  if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'm') return toggleMusic();
+  if (k === 'i') return togglePanel('inv'); if (k === 'k') return togglePanel('skills'); if (k === 'c') return togglePanel('craft'); if (k === 'j') return togglePanel('quests'); if (k === 'h') return togglePanel('house'); if (k === 'o') return togglePanel('options'); if (k === 'l') return togglePanel('ach'); if (k === 'n') return toggleMount(); if (k === 'm') return toggleMusic();
   if (panel) return;
   if (fishing) { if (k === 'e' || k === 'escape') { fishing = null; log('Recoges la caña.', '#aaa'); } return; }
   if (k === 'b') { if (W !== town) return log('Solo puedes construir en la ciudad.', '#f88'); buildMode = !buildMode; log(buildMode ? 'Modo construcción: Espacio coloca, X quita, Q/R cambia bloque.' : 'Modo construcción desactivado.', '#fc6'); return; }
@@ -585,9 +604,15 @@ function giveGift(id, item) {
   P.gifted[id] = P.day; const liked = FRIENDS[id].likes.includes(item), pts = liked ? 12 : 4; addFriend(id, pts);
   log(FRIENDS[id].n + (liked ? ': «¡Me encanta! ¡Gracias!» 💖' : ': «Gracias, muy amable.»'), '#f9c'); snd('pick'); return pts;
 }
+function toggleMount() {
+  if (!P.mount) { log('No tienes montura. Cómprala en el Establo de Ryu.', '#f88'); return false; }
+  P.riding = !P.riding; snd('pick'); log(P.riding ? 'Montas tu ' + MOUNTS[P.mount].n + '.' : 'Desmontas.', '#9cf'); return P.riding;
+}
 function talk(n) {
   if (n.id && !talk.direct) { openPanel('npc', n); return; }
   snd('ui');
+  if (n.role === 'dmerch') return openPanel('dmerch');
+  if (['bank', 'depot', 'temple', 'stable', 'recruit'].includes(n.role)) return openPanel(n.role);
   if (n.role === 'quest') return openPanel('quests');
   if (n.role === 'shop') return openPanel('shop');
   if (n.role === 'smith') return openPanel('craft');
@@ -691,7 +716,7 @@ function damageEnemy(e, dmg, color) {
 function killEnemy(e) {
   ents = ents.filter(x => x !== e); snd('die'); burst(e.fx * TS + 16, e.fy * TS + 16, e.col, 25); shake = e.boss ? 20 : 4;
   gainXp(e.xp); P.kills++; questEvent('kill', null, 1);
-  const g = Math.round((ri(1, 4) + e.lvl * 2) * (1 + P.sk.fortuna * .15) * (e.boss ? 10 : 1));
+  const g = Math.round((ri(1, 4) + e.lvl * 2) * (1 + P.sk.fortuna * .15 + (P.pet === 'gato' ? .25 : 0)) * (e.boss ? 10 : 1));
   drops.push({ x: e.x, y: e.y, gold: g });
   if (e.boss || e.rare || Math.random() < .18) drops.push({ x: e.x, y: e.y, item: genItem(null, e.lvl, e.boss ? ri(2, 4) : e.rare ? ri(3, 4) : null) });
   if (e.rare) { P.rares++; log('¡Derrotaste a un monstruo raro: ' + e.n + '!', '#fd4'); for (let i = 0; i < 3; i++) drops.push({ x: e.x, y: e.y, gold: g }); }
@@ -751,7 +776,7 @@ function gainXp(n) {
   if (P.buffs && P.buffs.sabiduria > 0) n = Math.round(n * 1.4);
   P.xp += n;
   while (P.xp >= xpNeed(P.lvl)) {
-    P.xp -= xpNeed(P.lvl); P.lvl++; P.sp += 3; P.kp += 1; P.hp = maxHp(); P.mp = maxMp();
+    P.xp -= xpNeed(P.lvl); P.lvl++; P.party.forEach(x => { if (!x.down) x.hp = allyMaxHp(x.id); }); P.sp += 3; P.kp += 1; P.hp = maxHp(); P.mp = maxMp();
     snd('lvl'); ring(P.fx * TS + 16, P.fy * TS + 16, '#fd4'); burst(P.fx * TS + 16, P.fy * TS + 16, '#fd4', 40);
     addText(P.fx * TS + 16, P.fy * TS - 10, '¡NIVEL ' + P.lvl + '!', '#fd4', 24);
     log('¡Subiste a nivel ' + P.lvl + '! +3 puntos de estado, +1 punto de habilidad.', '#fd4');
@@ -770,7 +795,7 @@ function hurtPlayer(d, src) {
   if (P.hp <= 0) die(src);
 }
 function die(src) {
-  P.deaths++; const lost = Math.floor(P.gold * .1); P.gold -= lost;
+  P.deaths++; const lost = P.blessed ? 0 : Math.floor(P.gold * .1); P.gold -= lost; if (P.blessed) { P.blessed = 0; log('✨ La bendición del templo te protegió: no pierdes oro.', '#ff9'); }
   log('Has caído ante ' + src + '. Pierdes ' + lost + ' de oro.', '#f44');
   P.hp = maxHp(); P.mp = maxMp(); enterTown([20, 7]); openPanel('death', { src, lost });
 }
@@ -807,6 +832,89 @@ function drawFishing(vw, vh) {
   cx.fillStyle = '#aaa'; cx.font = '10px sans-serif'; cx.fillText('ESPACIO', X + 35, Y + H + 14);
 }
 
+// ---------- Compañeros: mascotas, monturas y aliados ----------
+const PETS = {
+  perro: { n: 'Perro fiel', price: 300, col: '#a86', dmg: 1, range: 1, d: 'Muerde a enemigos cercanos.' },
+  gato: { n: 'Gato de la suerte', price: 400, col: '#fa5', dmg: .6, range: 1, gold: .25, d: '+25% de oro de los monstruos.' },
+  halcon: { n: 'Halcón', price: 600, col: '#cb9', dmg: .8, range: 4, d: 'Ataca a distancia (4 casillas).' },
+  slime: { n: 'Slime mascota', price: 500, col: '#5d8', dmg: .7, range: 1, heal: 1, d: 'Te cura poco a poco.' },
+};
+const MOUNTS = {
+  caballo: { n: 'Caballo', price: 800, col: '#7a4a2a', spd: .65, d: 'Muévete un 35% más rápido.' },
+  lobo: { n: 'Lobo gigante', price: 2500, col: '#556', spd: .5, atk: .1, d: 'Muévete un 50% más rápido y +10% ataque.' },
+};
+const ALLIES = {
+  mogzo: { n: 'Mogzo', cls: 'Guerrero', col: '#a63', hp: 2.2, dmg: 1, range: 1, price: 200, taunt: 1 },
+  merry: { n: 'Merry', cls: 'Sacerdotisa', col: '#ddf', hp: 1.2, dmg: .5, range: 3, price: 300, healer: 1 },
+  yume: { n: 'Yume', cls: 'Cazadora', col: '#da5', hp: 1.3, dmg: .9, range: 5, price: 250 },
+  shihoru: { n: 'Shihoru', cls: 'Maga', col: '#649', hp: 1, dmg: 1.3, range: 4, price: 300, magic: 1 },
+  ranta: { n: 'Ranta', cls: 'Caballero Oscuro', col: '#333', hp: 1.6, dmg: 1.2, range: 1, price: 250 },
+};
+const MAX_PARTY = 2;
+let comps = [];
+function allyMaxHp(id) { return Math.round((60 + P.lvl * 14) * ALLIES[id].hp); }
+function buildComps() {
+  comps = [];
+  if (P.pet) comps.push({ kind: 'pet', id: P.pet, x: P.x, y: P.y, fx: P.x, fy: P.y, mt: 0, cd: 1 });
+  for (const a of P.party) comps.push({ kind: 'ally', id: a.id, a, x: P.x, y: P.y, fx: P.x, fy: P.y, mt: 0, cd: 1 });
+  placeComps();
+}
+function placeComps() {
+  P.trail = [];
+  for (const c of comps) { let best = null; for (let r = 1; r < 4 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r && !best; dx++) { const x = P.x + dx, y = P.y + dy; if (!solidAt(x, y) && !comps.some(o => o !== c && o.x === x && o.y === y)) best = [x, y]; } if (best) { c.x = best[0]; c.y = best[1]; } else { c.x = P.x; c.y = P.y; } c.fx = c.x; c.fy = c.y; c.mt = 0; }
+}
+const compAt = (x, y, self) => comps.some(c => c !== self && c.x === x && c.y === y);
+function compDmg(c) { const D = c.kind === 'pet' ? PETS[c.id] : ALLIES[c.id]; return Math.round((4 + P.lvl * 2.2 + (c.kind === 'ally' ? P.lvl : 0)) * D.dmg); }
+function updateComps(dt) {
+  comps.forEach((c, i) => {
+    if (c.mt > 0) { c.mt -= dt; const k = Math.max(0, c.mt / .2); c.fx = c.x - c.dx * k; c.fy = c.y - c.dy * k; } else { c.fx = c.x; c.fy = c.y; }
+    c.cd -= dt; c.flash = Math.max(0, (c.flash || 0) - dt);
+    if (c.kind === 'ally' && c.a.down) return;
+    const D = c.kind === 'pet' ? PETS[c.id] : ALLIES[c.id];
+    // seguir
+    const dist = Math.abs(c.x - P.x) + Math.abs(c.y - P.y);
+    if (dist > 8) { placeComps(); return; }
+    const engaged = dist <= 3 && ents.some(e => Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= D.range && (D.range === 1 || los(c.x, c.y, e.x, e.y)));
+    if (c.mt <= 0 && !engaged && dist > 1 + (i > 0 ? 1 : 0)) {
+      const tgt = P.trail[P.trail.length - 1 - i] || [P.x, P.y];
+      let step = null; const opts = [[Math.sign(tgt[0] - c.x), 0], [0, Math.sign(tgt[1] - c.y)], [Math.sign(P.x - c.x), 0], [0, Math.sign(P.y - c.y)]].filter(o => o[0] || o[1]);
+      for (const o of opts) { const nx = c.x + o[0], ny = c.y + o[1]; if (!solidAt(nx, ny) && !compAt(nx, ny, c)) { step = o; break; } }
+      if (step) { c.x += step[0]; c.y += step[1]; c.dx = step[0]; c.dy = step[1]; c.mt = .2; }
+    }
+    if (c.cd > 0) return;
+    if (D.healer && P.hp < maxHp() * .6) { const h = Math.round(15 + P.lvl * 5); P.hp = Math.min(maxHp(), P.hp + h); addText(P.fx * TS + 16, P.fy * TS - 4, '+' + h, '#5f5'); ring(P.fx * TS + 16, P.fy * TS + 16, '#afa'); c.cd = 4; return; }
+    if (D.healer) { const hurt = comps.find(o => o.kind === 'ally' && !o.a.down && o.a.hp < allyMaxHp(o.id) * .5); if (hurt) { hurt.a.hp = Math.min(allyMaxHp(hurt.id), hurt.a.hp + 20 + P.lvl * 4); ring(hurt.fx * TS + 16, hurt.fy * TS + 16, '#afa'); c.cd = 4; return; } }
+    if (D.heal && P.hp < maxHp()) { P.hp = Math.min(maxHp(), P.hp + 2 + P.lvl * .5); }
+    const t = ents.filter(e => Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= D.range && (D.range === 1 || los(c.x, c.y, e.x, e.y))).sort((a, b) => (a === P.target ? -1 : 0) - (b === P.target ? -1 : 0) || a.hp - b.hp)[0];
+    if (!t) return;
+    c.cd = c.kind === 'pet' ? 1.3 : 1.1; c.swing = .2;
+    if (D.range > 1) { const ax = c.fx * TS + 16, ay = c.fy * TS + 16, bx = t.fx * TS + 16, by = t.fy * TS + 16, d = Math.hypot(bx - ax, by - ay) || 1; projs.push({ x: ax, y: ay, vx: (bx - ax) / d * 420, vy: (by - ay) / d * 420, dmg: compDmg(c), life: 1.2, kind: D.magic ? undefined : 'arrow', ally: 1 }); }
+    else damageEnemy(t, compDmg(c), '#8cf');
+  });
+}
+function hurtAlly(c, d, src) {
+  d = Math.max(1, Math.round(d * rnd(.85, 1.15) - P.lvl * .5)); c.a.hp -= d; c.flash = .2; addText(c.fx * TS + 16, c.fy * TS, '-' + d, '#fa8', 13);
+  if (c.a.hp <= 0) { c.a.hp = 0; c.a.down = 1; log(ALLIES[c.id].n + ' ha caído. Llévalo al Templo para revivirlo.', '#f88'); snd('die'); }
+}
+function drawComp(c) {
+  const sx = c.fx * TS - camX, sy = c.fy * TS - camY;
+  if (c.kind === 'pet') {
+    const D = PETS[c.id], b = Math.abs(Math.sin(time * 10)) * (c.mt > 0 ? 3 : 1);
+    cx.fillStyle = 'rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(sx + 16, sy + 28, 8, 3, 0, 0, 7); cx.fill();
+    cx.fillStyle = D.col;
+    if (c.id === 'halcon') { const fy = sy + 4 + Math.sin(time * 4) * 3; cx.beginPath(); cx.ellipse(sx + 16, fy + 10, 5, 4, 0, 0, 7); cx.fill(); const wg = Math.sin(time * 14) * 6; cx.beginPath(); cx.moveTo(sx + 16, fy + 9); cx.lineTo(sx + 4, fy + 6 + wg); cx.lineTo(sx + 28, fy + 6 + wg); cx.fill(); cx.fillStyle = '#fc0'; cx.fillRect(sx + 19, fy + 8, 3, 2); }
+    else if (c.id === 'slime') { cx.globalAlpha = .85; cx.beginPath(); cx.ellipse(sx + 16, sy + 22 - b / 2, 9 + b / 2, 7 - b / 3, 0, 0, 7); cx.fill(); cx.globalAlpha = 1; cx.fillStyle = '#000'; cx.fillRect(sx + 12, sy + 19, 2, 2); cx.fillRect(sx + 18, sy + 19, 2, 2); }
+    else { cx.fillRect(sx + 8, sy + 16 - b, 16, 9); cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 11 - b, 8, 8); cx.fillRect(sx + 9, sy + 24 - b, 3, 5); cx.fillRect(sx + 20, sy + 24 - b, 3, 5); cx.fillStyle = '#000'; cx.fillRect(sx + (P.x >= c.x ? 25 : 6), sy + 13 - b, 2, 2); if (c.id === 'gato') { cx.fillStyle = D.col; cx.fillRect(sx + (P.x >= c.x ? 20 : 4), sy + 8 - b, 2, 3); cx.fillRect(sx + (P.x >= c.x ? 26 : 10), sy + 8 - b, 2, 3); } }
+    return;
+  }
+  const D = ALLIES[c.id];
+  if (c.a.down) { cx.globalAlpha = .5; cx.save(); cx.translate(sx + 16, sy + 20); cx.rotate(Math.PI / 2); cx.translate(-16, -16); drawChar(0, 0, '#777', [0, 1], {}); cx.restore(); cx.globalAlpha = 1; return; }
+  drawChar(sx, sy, D.col, [Math.sign(P.x - c.x) || 0, 1], { flash: c.flash > 0, moving: c.mt > 0, hair: D.healer ? '#eb5' : '#321', weapon: D.range === 1 ? '#bbb' : null, bow: D.range === 5, swing: c.swing, helm: D.taunt ? '#888' : null, cape: D.magic ? '#324' : D.healer ? '#eef' : null });
+  c.swing = Math.max(0, (c.swing || 0) - .016);
+  cx.fillStyle = '#9cf'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(D.n, sx + 16, sy - 8);
+  cx.fillStyle = '#000'; cx.fillRect(sx + 4, sy - 5, 24, 3); cx.fillStyle = '#4c4'; cx.fillRect(sx + 4, sy - 5, 24 * c.a.hp / allyMaxHp(c.id), 3);
+}
+
 // ---------- Partículas ----------
 function burst(x, y, col, n) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), s = rnd(30, 160); parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, l: rnd(.3, .7), col, sz: rnd(2, 4) }); } }
 function ring(x, y, col) { parts.push({ ring: 1, x, y, l: .5, col, r: 4 }); }
@@ -831,7 +939,8 @@ function update(dt) {
     if (padDir) [dx, dy] = padDir;
     if (dx || dy) {
       P.dir = [dx, dy];
-      if (!solidAt(P.x + dx, P.y + dy)) { P.x += dx; P.y += dy; P.mdx = dx; P.mdy = dy; P.mt = moveTime(); if (Math.random() < .3) snd('step'); pickup(); checkExit(); }
+      const sw = comps.find(c => c.x === P.x + dx && c.y === P.y + dy); if (sw) { sw.x = P.x; sw.y = P.y; sw.fx = sw.x; sw.fy = sw.y; }
+      if (!solidAt(P.x + dx, P.y + dy)) { P.trail.push([P.x, P.y]); if (P.trail.length > 6) P.trail.shift(); P.x += dx; P.y += dy; P.mdx = dx; P.mdy = dy; P.mt = moveTime(); if (Math.random() < .3) snd('step'); pickup(); checkExit(); }
     }
   }
   // auto ataque si hay enemigo adyacente
@@ -846,6 +955,8 @@ function update(dt) {
     if (e.boss && e.aggro) bossAI(e, dt);
     const sight = e.ranged && e.aggro && dist <= 7 && los(e.x, e.y, P.x, P.y);
     if (sight && cheb > 1 && e.cd <= 0) { e.cd = e.ranged === 'magic' ? 2.4 : 1.8; enemyShoot(e, e.ranged); }
+    else if (e.cd <= 0 && cheb > 1 && comps.some(c => c.kind === 'ally' && !c.a.down && Math.max(Math.abs(c.x - e.x), Math.abs(c.y - e.y)) <= 1)) { const c = comps.find(c => c.kind === 'ally' && !c.a.down && Math.max(Math.abs(c.x - e.x), Math.abs(c.y - e.y)) <= 1); e.cd = 1.4; e.lunge = .15; hurtAlly(c, e.atk, e.n); }
+    else if (cheb <= 1 && e.cd <= 0 && comps.some(c => c.kind === 'ally' && !c.a.down && ALLIES[c.id].taunt && Math.max(Math.abs(c.x - e.x), Math.abs(c.y - e.y)) <= 1) && Math.random() < .5) { const c = comps.find(c => c.kind === 'ally' && !c.a.down && ALLIES[c.id].taunt && Math.max(Math.abs(c.x - e.x), Math.abs(c.y - e.y)) <= 1); e.cd = 1.4; hurtAlly(c, e.atk, e.n); }
     else if (cheb <= 1 && e.cd <= 0) { e.cd = e.boss ? (e.enraged ? .8 : 1.1) : 1.4; e.lunge = .15; hurtPlayer(e.atk, e.n); }
     else if (cheb > 1 && e.mcd <= 0 && !(sight && dist <= 4)) {
       e.mcd = (e.enraged ? e.spd * .7 : e.spd) + (e.aggro ? 0 : rnd(.5, 2));
@@ -882,6 +993,7 @@ function update(dt) {
   shake = Math.max(0, shake - dt * 30);
   for (const b in P.buffs) { P.buffs[b] -= dt; if (P.buffs[b] <= 0) { delete P.buffs[b]; log('El efecto ' + BUFFN[b] + ' terminó.', '#aaa'); } }
   if (P.buffs.vigor > 0) P.hp = Math.min(maxHp(), P.hp + dt * (1 + stat('vit') * .2) * 2);
+  updateComps(dt);
   growCrops(dt); updateVisitors(dt); updateSeason(dt); updateField(dt);
   P.achT = (P.achT || 0) - dt; if (P.achT <= 0) { P.achT = 1; checkAch(); }
   // regeneración de recursos en ciudad
@@ -1017,6 +1129,8 @@ function drawEnemy(e) {
 function render() {
   const vw = cv.width, vh = cv.height;
   camX = P.fx * TS + 16 - vw / 2 + (shake ? rnd(-shake, shake) : 0); camY = P.fy * TS + 16 - vh / 2 + (shake ? rnd(-shake, shake) : 0);
+  const mw = W.w * TS, mh = W.h * TS;
+  camX = mw <= vw ? (mw - vw) / 2 : Math.max(0, Math.min(mw - vw, camX)); camY = mh <= vh ? (mh - vh) / 2 : Math.max(0, Math.min(mh - vh, camY));
   camX = Math.round(camX); camY = Math.round(camY);
   cx.fillStyle = '#000'; cx.fillRect(0, 0, vw, vh);
   const x0 = Math.floor(camX / TS) - 1, y0 = Math.floor(camY / TS) - 1, x1 = x0 + Math.ceil(vw / TS) + 2, y1 = y0 + Math.ceil(vh / TS) + 2;
@@ -1027,16 +1141,22 @@ function render() {
     const o = W.obj[x + ',' + y]; if (o && BLOCKS[o].floor) drawBlock(o, sx, sy); if (o === 'cultivo' && W === town) drawCrop(x, y, sx, sy);
   }
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const o = W.obj[x + ',' + y]; if (o && !BLOCKS[o].floor) drawBlock(o, x * TS - camX, y * TS - camY); }
+  if (W.roofs) for (const [x0, y0, w, h, col] of W.roofs) { const sx = x0 * TS - camX, sy = y0 * TS - camY; cx.fillStyle = col; cx.fillRect(sx - 4, sy - 10, w * TS + 8, 18); cx.fillStyle = '#0003'; cx.fillRect(sx - 4, sy + 4, w * TS + 8, 4); cx.fillStyle = '#5a3a1a'; cx.fillRect(sx + w * TS / 2 - 8, sy + h * TS - 22, 16, 22); cx.fillStyle = '#ffd'; cx.fillRect(sx + 6, sy + 16, 10, 8); cx.fillRect(sx + w * TS - 16, sy + 16, 10, 8); }
   if (W === town) { cx.strokeStyle = '#fc6a'; cx.setLineDash([4, 4]); cx.strokeRect(PLOT.x * TS - camX, PLOT.y * TS - camY, PLOT.w * TS, PLOT.h * TS); cx.setLineDash([]); cx.fillStyle = '#fc6'; cx.font = '11px sans-serif'; cx.textAlign = 'left'; cx.fillText(HOUSE[P.house || 1].n + ' (nv ' + (P.house || 1) + ') — Confort ' + comfort() + '  [H: mejorar]', PLOT.x * TS - camX + 2, PLOT.y * TS - camY - 4); }
   for (const d of drops) { const sx = d.x * TS - camX, sy = d.y * TS - camY + Math.sin(time * 4 + d.x) * 2; if (d.gold) { cx.fillStyle = '#fd4'; cx.beginPath(); cx.arc(sx + 12, sy + 20, 4, 0, 7); cx.arc(sx + 19, sy + 22, 4, 0, 7); cx.fill(); } else if (d.item) { cx.fillStyle = ['#ccc', '#5e5', '#5af', '#c7f', '#fb3'][d.item.rar]; cx.globalAlpha = .4 + Math.sin(time * 5) * .2; cx.fillRect(sx + 6, sy + 6, 20, 20); cx.globalAlpha = 1; cx.font = '16px sans-serif'; cx.textAlign = 'center'; cx.fillText(SLOTS[d.item.slot], sx + 16, sy + 22); } else { cx.font = '14px sans-serif'; cx.textAlign = 'center'; cx.fillText(d.cons ? CONSUM[d.cons].ico : MATS[d.mat], sx + 16, sy + 22); } }
   // entidades ordenadas por y
-  const list = [...(W === town ? visitors : []).map(v => ({ v, y: v.fy })), ...(W.npcs || []).map(n => ({ n, y: n.y })), ...ents.map(e => ({ e, y: e.fy })), { p: 1, y: P.fy }].sort((a, b) => a.y - b.y);
+  const list = [...(W === town ? visitors : []).map(v => ({ v, y: v.fy })), ...(W.npcs || []).map(n => ({ n, y: n.y })), ...ents.map(e => ({ e, y: e.fy })), ...comps.map(c => ({ c, y: c.fy - .01 })), { p: 1, y: P.fy }].sort((a, b) => a.y - b.y);
   for (const o of list) {
     if (o.n) { const sx = o.n.x * TS - camX, sy = o.n.y * TS - camY; drawChar(sx, sy, o.n.col, [0, 1], { hair: o.n.role === 'god' ? '#111' : '#a63', legs: '#335' }); cx.fillStyle = '#fff'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(o.n.n, sx + 16, sy - 4); if (o.n.role === 'quest' && QUESTS[P.q] && P.qp >= QUESTS[P.q].c) { cx.fillStyle = '#fd4'; cx.font = 'bold 18px sans-serif'; cx.fillText('!', sx + 16, sy - 14 + Math.sin(time * 5) * 2); } }
     else if (o.v) { const v = o.v, sx = v.fx * TS - camX, sy = v.fy * TS - camY; drawChar(sx, sy, v.col, [0, 1], { hair: v.hair, moving: v.mt > 0 }); cx.fillStyle = '#9cf'; cx.font = '10px sans-serif'; cx.textAlign = 'center'; cx.fillText(v.n + (v.gift ? ' 🎁' : ''), sx + 16, sy - 4);
       if (Math.abs(v.x - P.x) + Math.abs(v.y - P.y) <= 3) { cx.font = '11px sans-serif'; const w = cx.measureText(v.line).width + 10; cx.fillStyle = '#fffe'; cx.fillRect(sx + 16 - w / 2, sy - 30, w, 16); cx.fillStyle = '#222'; cx.fillText(v.line, sx + 16, sy - 18); } }
+    else if (o.c) drawComp(o.c);
     else if (o.e) drawEnemy(o.e);
-    else { const E = P.eq, rc = ['#ccc', '#9e9', '#9cf', '#d9f', '#fd6']; drawChar(P.fx * TS - camX, P.fy * TS - camY, E.armadura ? ['#667', '#4a6', '#36a', '#738', '#a70'][E.armadura.rar] : '#2a4a8a', P.dir, { flash: P.flash > 0, bow: E.arma && E.arma.name.startsWith('Arco') ? 1 : 0, weapon: E.arma && !E.arma.name.startsWith('Arco') ? rc[E.arma.rar] : null, wtype: E.arma && E.arma.name.split(' ')[0], wrar: E.arma ? E.arma.rar : 0, trim: E.armadura ? rc[E.armadura.rar] : null, cape: E.armadura && E.armadura.rar >= 2 ? ['', '', '#246', '#526', '#a22'][E.armadura.rar] : null, helm: E.casco ? ['#888', '#7a9', '#79b', '#a8c', '#db5'][E.casco.rar] : null, helmRar: E.casco ? E.casco.rar : 0, ring: E.anillo ? rc[E.anillo.rar] : null, swing: P.swing, moving: P.mt > 0, hair: '#ddd' }); }
+    else { const psx = P.fx * TS - camX, psy = P.fy * TS - camY;
+      if (P.riding && P.mount) { const M = MOUNTS[P.mount], b = P.mt > 0 ? Math.abs(Math.sin(time * 16)) * 2 : 0, f = P.dir[0] < 0 ? -1 : 1; cx.fillStyle = 'rgba(0,0,0,.3)'; cx.beginPath(); cx.ellipse(psx + 16, psy + 30, 14, 4, 0, 0, 7); cx.fill(); cx.fillStyle = M.col; cx.fillRect(psx + 3, psy + 18 - b, 26, 9); cx.fillRect(psx + 16 + f * 10, psy + 11 - b, 7, 9); for (const lx of [5, 11, 19, 25]) cx.fillRect(psx + lx, psy + 26 - b + (P.mt > 0 ? Math.sin(time * 16 + lx) * 2 : 0), 3, 5); cx.fillStyle = '#222'; cx.fillRect(psx + 16 - f * 13, psy + 18 - b, 3, 8); }
+      cx.save(); if (P.riding && P.mount) cx.translate(0, -8);
+      const E = P.eq, rc = ['#ccc', '#9e9', '#9cf', '#d9f', '#fd6']; drawChar(P.fx * TS - camX, P.fy * TS - camY, E.armadura ? ['#667', '#4a6', '#36a', '#738', '#a70'][E.armadura.rar] : '#2a4a8a', P.dir, { flash: P.flash > 0, bow: E.arma && E.arma.name.startsWith('Arco') ? 1 : 0, weapon: E.arma && !E.arma.name.startsWith('Arco') ? rc[E.arma.rar] : null, wtype: E.arma && E.arma.name.split(' ')[0], wrar: E.arma ? E.arma.rar : 0, trim: E.armadura ? rc[E.armadura.rar] : null, cape: E.armadura && E.armadura.rar >= 2 ? ['', '', '#246', '#526', '#a22'][E.armadura.rar] : null, helm: E.casco ? ['#888', '#7a9', '#79b', '#a8c', '#db5'][E.casco.rar] : null, helmRar: E.casco ? E.casco.rar : 0, ring: E.anillo ? rc[E.anillo.rar] : null, swing: P.swing, moving: P.mt > 0 && !P.riding, hair: '#ddd' }); cx.restore();
+      if (P.title) { cx.font = 'bold 10px serif'; cx.textAlign = 'center'; cx.fillStyle = '#000'; cx.fillText('«' + P.title + '»', psx + 17, psy - 7 - (P.riding ? 8 : 0)); cx.fillStyle = '#fd6'; cx.fillText('«' + P.title + '»', psx + 16, psy - 8 - (P.riding ? 8 : 0)); } }
   }
   for (const p of projs) { if (p.kind === 'arrow') { const a = Math.atan2(p.vy, p.vx); cx.save(); cx.translate(p.x - camX, p.y - camY); cx.rotate(a); cx.fillStyle = '#ca8'; cx.fillRect(-8, -1, 14, 2); cx.fillStyle = '#ddd'; cx.fillRect(6, -2, 4, 4); cx.restore(); } else { cx.fillStyle = p.kind === 'magic' ? '#c8f' : '#ff8'; cx.beginPath(); cx.arc(p.x - camX, p.y - camY, p.hostile ? 5 : 6, 0, 7); cx.fill(); } }
   for (const w of warns) { if (w.done) continue; cx.fillStyle = `rgba(255,${w.t < .3 ? 0 : 80},0,${.25 + (1 - Math.min(1, w.t)) * .4})`; cx.fillRect(w.x * TS - camX + 2, w.y * TS - camY + 2, TS - 4, TS - 4); }
@@ -1075,14 +1195,18 @@ function render() {
   drawMinimap();
 }
 function drawMinimap() {
-  const s = Math.min(150 / W.w, 150 / W.h); mx.fillStyle = '#000'; mx.fillRect(0, 0, 150, 150);
+  const s = Math.min(150 / W.w, 150 / W.h), ox = (150 - W.w * s) / 2, oy = (150 - W.h * s) / 2; drawMinimap.off = [ox, oy];
+  if (mm.height !== Math.round(W.h * s) && false) { }
+  mx.fillStyle = W.dark ? '#000' : '#1f4a20'; mx.fillRect(0, 0, 150, 150); mx.save(); mx.translate(ox, oy);
   for (let y = 0; y < W.h; y++) for (let x = 0; x < W.w; x++) {
     const t = gt(W, x, y); if (t === T.DWALL) continue;
-    mx.fillStyle = t === T.DOWN ? '#fc0' : t === T.UP ? '#0cf' : t === T.WATER ? '#36c' : t === T.TREE ? '#163' : SOLID.has(t) ? '#666' : t === T.PLOT ? '#a85' : W.dark ? '#544' : '#3a6';
+    mx.fillStyle = t === T.EXIT ? '#fc6' : t === T.DOWN ? '#fc0' : t === T.UP ? '#0cf' : t === T.WATER ? '#36c' : t === T.TREE ? '#163' : SOLID.has(t) ? '#666' : t === T.PLOT ? '#a85' : W.dark ? '#544' : '#3a6';
     mx.fillRect(x * s, y * s, s + .5, s + .5);
   }
   for (const e of ents) { mx.fillStyle = e.boss ? '#f0f' : '#f33'; mx.fillRect(e.x * s - 1, e.y * s - 1, 3, 3); }
-  mx.fillStyle = '#fff'; mx.fillRect(P.x * s - 2, P.y * s - 2, 4, 4);
+  for (const c of comps) { mx.fillStyle = '#5cf'; mx.fillRect(c.x * s - 1, c.y * s - 1, 3, 3); }
+  for (const n of W.npcs || []) { mx.fillStyle = '#ff0'; mx.fillRect(n.x * s - 1, n.y * s - 1, 3, 3); }
+  mx.fillStyle = '#fff'; mx.fillRect(P.x * s - 2, P.y * s - 2, 4, 4); mx.restore();
 }
 function hud() {
   const mh = maxHp(), mp = maxMp();
@@ -1090,7 +1214,7 @@ function hud() {
   $('hp').style.width = (100 * P.hp / mh) + '%'; $('hpt').textContent = `PV ${Math.ceil(P.hp)}/${mh}`;
   $('mp').style.width = (100 * P.mp / mp) + '%'; $('mpt').textContent = `MP ${Math.floor(P.mp)}/${mp}`;
   $('xp').style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
-  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + `<br>${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
+  const q = QUESTS[P.q]; $('hinfo').innerHTML = (q ? `📜 ${q.n}: ${Math.min(P.qp, q.c)}/${q.c}` : '📜 ¡Todas las misiones completadas!') + Object.keys(P.buffs).map(b => `<br><span style="color:#fc8">${BUFFN[b]} ${Math.ceil(P.buffs[b])}s</span>`).join('') + (P.party.length ? '<br>👥 ' + P.party.map(x => `${ALLIES[x.id].n} ${x.down ? '💀' : Math.ceil(x.hp) + '/' + allyMaxHp(x.id)}`).join(' · ') : '') + (P.pet ? ' 🐾 ' + PETS[P.pet].n : '') + (P.riding ? ' 🐴' : '') + (P.bank ? ' · 🏦 ' + P.bank : '') + `<br>${season().ico} ${season().n}, día ${P.day} · ${WEATHER_N[weather.type]}` + `<br><span style="color:#888">Clase: ${CLASSES[P.cls].n} · ${music.on ? '🎵' : '🔇'} (M) · Opciones (O)</span>`;
   $('log').innerHTML = msgs.map(m => `<div style="color:${m.c};opacity:${Math.min(1, m.a)}">${m.t}</div>`).join('');
   let h = ''; ACTIVE.forEach((id, i) => { const s = SKILLS[id], cd = P.cds[id] || 0; h += `<div class="slot" style="opacity:${P.sk[id] ? 1 : .35}"><span class="k">${i + 1}</span><b>${['💥', '🌀', '🔥', '✨'][i]}</b>${s.n.split(' ')[0]}<div class="cd" style="height:${cd / s.cd * 100}%"></div></div>`; });
   h += `<div class="slot"><span class="k">5</span><b>❤</b>x${P.cons.pocion_vida}</div><div class="slot"><span class="k">6</span><b>💧</b>x${P.cons.pocion_mana}</div>`;
@@ -1173,9 +1297,38 @@ function drawPanel() {
     h += gifts.map(k => `<button data-act="gift" data-k="${k}" ${P.gifted[n.id] === P.day ? 'disabled' : ''}>${MATS[k] || CONSUM[k].ico} ${k.replace('_', ' ')}${F.likes.includes(k) ? ' 💖' : ''}</button>`).join('') || '<i>No tienes nada que regalar.</i>';
     h += `<h3>Recompensas de amistad</h3>` + F.rew.map(([hh, d]) => `<div style="color:${hs >= hh ? '#9f9' : '#888'}">${hs >= hh ? '✔' : '○'} ${hh} 💖 — ${d}</div>`).join('');
   }
+  if (panel === 'dmerch') {
+    h = close + `<h2>🎒 Mercader errante</h2><p>«Psst… mercancía rara de las profundidades. Solo por hoy.» 💰 ${P.gold}</p><div class="grid">` + (W.mstock || []).map((it, i) => `<div>${itemHtml(it, 'none')}<button data-act="dbuy" data-k="${i}" ${P.gold >= it.price ? '' : 'disabled'}>${it.price}💰</button></div>`).join('') + '</div>';
+    h += `<p><button data-act="delixir" ${P.gold >= 150 + P.floor * 20 ? '' : 'disabled'}>Elixir completo (+3 pociones de vida y maná) — ${150 + P.floor * 20} oro</button></p>`;
+  }
+  if (panel === 'bank') {
+    h = close + `<h2>🏦 Banco de Orario</h2><p>Lo que guardas en el banco no se pierde al morir. Interés: 1% diario (máx. 500).</p><p>En mano: 💰 ${P.gold} · En el banco: 🏦 ${P.bank}</p>`;
+    for (const v of [100, 1000]) h += `<button data-act="dep" data-k="${v}">Depositar ${v}</button>`; h += `<button data-act="dep" data-k="all">Depositar todo</button><br>`;
+    for (const v of [100, 1000]) h += `<button data-act="wd" data-k="${v}">Retirar ${v}</button>`; h += `<button data-act="wd" data-k="all">Retirar todo</button>`;
+  }
+  if (panel === 'depot') {
+    h = close + `<h2>📦 Depósito</h2><p>Almacén ilimitado de objetos (clic para mover).</p><button data-act="depmats">Guardar todos los materiales</button> <button data-act="takemats">Sacar todos los materiales</button><p><small>Materiales guardados: ${Object.entries(P.depotMats || {}).filter(e => e[1] > 0).map(([k, v]) => (MATS[k] || k) + v).join(' ') || 'ninguno'}</small></p>
+      <h3>Depósito (${P.depot.length})</h3><div class="grid">${P.depot.map(it => itemHtml(it, 'dtake')).join('')}</div><h3>Mochila</h3><div class="grid">${P.inv.map(it => itemHtml(it, 'dstore')).join('')}</div>`;
+  }
+  if (panel === 'temple') {
+    const down = P.party.filter(a => a.down).length;
+    h = close + `<h2>⛪ Templo</h2><p>«Que los dioses te protejan, aventurero.»</p><button data-act="theal">Curación completa (gratis)</button>
+      <button data-act="trevive" ${down && P.gold >= 50 * down ? '' : 'disabled'}>Revivir aliados caídos (${down}) — ${50 * down} oro</button>
+      <button data-act="tbless" ${P.blessed || P.gold < 50 * P.lvl ? 'disabled' : ''}>Bendición: la próxima muerte no cuesta oro — ${50 * P.lvl} oro</button>${P.blessed ? '<p style="color:#ff9">✨ Estás bendecido.</p>' : ''}`;
+  }
+  if (panel === 'stable') {
+    h = close + `<h2>🐴 Establo de Ryu</h2><p>💰 ${P.gold}</p><h3>Mascotas (te acompañan y luchan)</h3>`;
+    for (const k in PETS) { const D = PETS[k], own = P.pets.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<button data-act="setpet" data-k="${k}">${P.pet === k ? '✔ Activa' : 'Llevar'}</button>` : `<button data-act="buypet" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
+    h += `<button data-act="setpet" data-k="">Dejar mascota en casa</button><h3>Monturas (N para montar)</h3>`;
+    for (const k in MOUNTS) { const D = MOUNTS[k], own = P.mounts.includes(k); h += `<div>${D.n} — <small>${D.d}</small> ${own ? `<button data-act="setmount" data-k="${k}">${P.mount === k ? '✔ Activa' : 'Usar'}</button>` : `<button data-act="buymount" data-k="${k}" ${P.gold >= D.price ? '' : 'disabled'}>Comprar ${D.price}💰</button>`}</div>`; }
+  }
+  if (panel === 'recruit') {
+    h = close + `<h2>⚔ Reclutas del Gremio</h2><p>Forma un grupo como en Grimgar (máx. ${MAX_PARTY} aliados). Suben de nivel contigo. 💰 ${P.gold}</p>`;
+    for (const k in ALLIES) { const D = ALLIES[k], inp = P.party.find(a => a.id === k), cost = D.price + P.lvl * 20; h += `<div style="margin:4px 0"><b style="color:${D.col === '#333' ? '#aaa' : D.col}">${D.n}</b> — ${D.cls} ${D.healer ? '(cura)' : D.taunt ? '(tanque)' : D.range > 1 ? '(distancia)' : '(cuerpo a cuerpo)'} ${inp ? `<button data-act="dismiss" data-k="${k}">Despedir</button> ${inp.down ? '💀' : '❤ ' + inp.hp + '/' + allyMaxHp(k)}` : `<button data-act="hire" data-k="${k}" ${P.party.length < MAX_PARTY && P.gold >= cost ? '' : 'disabled'}>Reclutar ${cost}💰</button>`}</div>`; }
+  }
   if (panel === 'ach') {
     const got = ACH.filter(a => P.ach[a.id]).length;
-    h = close + `<h2>🏆 Logros (${got}/${ACH.length})</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">` + ACH.map(a => `<div style="padding:6px;border-radius:6px;background:${P.ach[a.id] ? '#2a3a1a' : '#0005'};opacity:${P.ach[a.id] ? 1 : .6}">${P.ach[a.id] ? '🏆' : '🔒'} <b>${a.n}</b><br><small>${a.d} · +${a.g} oro</small></div>`).join('') + '</div>';
+    h = close + `<h2>🏆 Logros (${got}/${ACH.length})</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">` + ACH.map(a => `<div style="padding:6px;border-radius:6px;background:${P.ach[a.id] ? '#2a3a1a' : '#0005'};opacity:${P.ach[a.id] ? 1 : .6}">${P.ach[a.id] ? '🏆' : '🔒'} <b>${a.n}</b><br><small>${a.d} · +${a.g} oro</small>${P.ach[a.id] ? `<br><button data-act="title" data-k="${a.n}">${P.title === a.n ? '✔ Título activo' : 'Usar como título'}</button>` : ''}</div>`).join('') + '</div>' + `<p><button data-act="title" data-k="">Quitar título</button></p>`;
   }
   if (panel === 'options') {
     h = close + `<h2>⚙ Opciones</h2><button data-act="music">${music.on ? '🔇 Silenciar música' : '🎵 Activar música'} (M)</button>
@@ -1191,7 +1344,7 @@ function drawPanel() {
 $('panel').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) panelAct(b.dataset.act, b.dataset, false); });
 $('panel').addEventListener('contextmenu', e => { e.preventDefault(); const b = e.target.closest('[data-act]'); if (b && b.dataset.act === 'equip') panelAct('sell', b.dataset, true); });
 $('panel').addEventListener('mousemove', e => { const b = e.target.closest('[data-uid]'), tip = $('tip'); if (!b) { tip.style.display = 'none'; return; } const it = findItem(+b.dataset.uid); if (!it) return; tip.innerHTML = itemTip(it); tip.style.display = 'block'; tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
-function findItem(u) { return P.inv.find(i => i.uid === u) || Object.values(P.eq).find(i => i && i.uid === u) || (P.chest || []).find(i => i.uid === u); }
+function findItem(u) { return P.inv.find(i => i.uid === u) || P.depot.find(i => i.uid === u) || (W.mstock || []).find(i => i.uid === u) || Object.values(P.eq).find(i => i && i.uid === u) || (P.chest || []).find(i => i.uid === u); }
 function panelAct(a, d) {
   const it = d.uid ? findItem(+d.uid) : null;
   if (a === 'close') return closePanel();
@@ -1206,6 +1359,24 @@ function panelAct(a, d) {
   if (a === 'eat') usePot(d.k);
   if (a === 'music') toggleMusic();
   if (a === 'chat') chat(panel_data.id);
+  if (a === 'title') { P.title = d.k || ''; }
+  if (a === 'dbuy') { const it = W.mstock && W.mstock[+d.k]; if (it && P.gold >= it.price && P.inv.length < 32) { P.gold -= it.price; W.mstock.splice(+d.k, 1); P.inv.push(it); log('Compraste ' + it.name + ' [' + RAR[it.rar] + ']', '#c7f'); snd('pick'); } }
+  if (a === 'delixir') { const c = 150 + P.floor * 20; if (P.gold >= c) { P.gold -= c; P.cons.pocion_vida += 3; P.cons.pocion_mana += 3; snd('pick'); } }
+  if (a === 'dep') { const v = d.k === 'all' ? P.gold : Math.min(P.gold, +d.k); P.gold -= v; P.bank += v; snd('pick'); }
+  if (a === 'wd') { const v = d.k === 'all' ? P.bank : Math.min(P.bank, +d.k); P.bank -= v; P.gold += v; snd('pick'); }
+  if (a === 'dstore' && it) { P.inv = P.inv.filter(i => i !== it); P.depot.push(it); }
+  if (a === 'dtake' && it && P.inv.length < 32) { P.depot = P.depot.filter(i => i !== it); P.inv.push(it); }
+  if (a === 'depmats') { P.depotMats = P.depotMats || {}; for (const k in P.mats) { P.depotMats[k] = (P.depotMats[k] || 0) + P.mats[k]; P.mats[k] = 0; } }
+  if (a === 'takemats') { for (const k in P.depotMats || {}) { P.mats[k] = (P.mats[k] || 0) + P.depotMats[k]; } P.depotMats = {}; }
+  if (a === 'theal') { P.hp = maxHp(); P.mp = maxMp(); P.party.forEach(x => { if (!x.down) x.hp = allyMaxHp(x.id); }); snd('heal'); }
+  if (a === 'trevive') { const down = P.party.filter(x => x.down); if (P.gold >= 50 * down.length) { P.gold -= 50 * down.length; down.forEach(x => { x.down = 0; x.hp = allyMaxHp(x.id); }); buildComps(); snd('heal'); log('Tus aliados han sido revividos.', '#9f9'); } }
+  if (a === 'tbless') { const c = 50 * P.lvl; if (!P.blessed && P.gold >= c) { P.gold -= c; P.blessed = 1; snd('heal'); } }
+  if (a === 'buypet' && PETS[d.k] && P.gold >= PETS[d.k].price && !P.pets.includes(d.k)) { P.gold -= PETS[d.k].price; P.pets.push(d.k); P.pet = d.k; buildComps(); snd('lvl'); log('¡' + PETS[d.k].n + ' es tu nueva mascota!', '#9cf'); }
+  if (a === 'setpet') { P.pet = d.k || null; buildComps(); }
+  if (a === 'buymount' && MOUNTS[d.k] && P.gold >= MOUNTS[d.k].price && !P.mounts.includes(d.k)) { P.gold -= MOUNTS[d.k].price; P.mounts.push(d.k); P.mount = d.k; snd('lvl'); log('¡Compraste: ' + MOUNTS[d.k].n + '! Pulsa N para montar.', '#9cf'); }
+  if (a === 'setmount') { P.mount = d.k; }
+  if (a === 'hire') { const D = ALLIES[d.k], cost = D.price + P.lvl * 20; if (P.party.length < MAX_PARTY && P.gold >= cost && !P.party.find(x => x.id === d.k)) { P.gold -= cost; P.party.push({ id: d.k, hp: allyMaxHp(d.k), down: 0 }); buildComps(); log(D.n + ' (' + D.cls + ') se une a tu grupo.', '#9cf'); snd('lvl'); } }
+  if (a === 'dismiss') { P.party = P.party.filter(x => x.id !== d.k); buildComps(); }
   if (a === 'gift') giveGift(panel_data.id, d.k);
   if (a === 'npcrole') { const n = panel_data; talk.direct = 1; try { closePanel(); talk(n); } finally { talk.direct = 0; } return; }
   if (a === 'export') { const t = exportSave(); const ta = document.getElementById('savetxt'); downloadSave(t); drawPanel(); document.getElementById('savetxt').value = t; return; }
@@ -1235,7 +1406,7 @@ function save() {
   if (!P || !town) return;
   try {
     const rec = Math.max(+localStorage.getItem('cc_record') || 0, P.maxFloor); localStorage.setItem('cc_record', rec);
-    localStorage.setItem('cc_save', JSON.stringify({ v: 3, P: { ...P, target: null }, obj: town.obj, crops: town.crops, uid }));
+    localStorage.setItem('cc_save', JSON.stringify({ v: 4, P: { ...P, target: null, trail: [] }, obj: town.obj, crops: town.crops, uid }));
   } catch (e) { }
 }
 function load() {
@@ -1243,8 +1414,9 @@ function load() {
   const d = newPlayer(); P = Object.assign(d, s.P); P.mats = Object.assign(newPlayer().mats, s.P.mats); P.cons = Object.assign(newPlayer().cons, s.P.cons); P.buffs = P.buffs || {}; P.target = null; P.cds = {}; uid = s.uid || 1000; visitors = [];
   for (const k in SKILLS) P.sk[k] = P.sk[k] || 0;
   town = genTown(); town.obj = s.obj || {}; town.crops = s.crops || {};
+  P.trail = []; comps = [];
   if (P.floor > 0) enterFloor(P.floor); else if (P.field) enterField([P.x, P.y]); else { W = town; P.fx = P.x; P.fy = P.y; if (solidAt(P.x, P.y, true)) { P.x = 20; P.y = 7; P.fx = 20; P.fy = 7; } }
-  return true;
+  buildComps(); return true;
 }
 const CLASSES = {
   guerrero: { n: 'Guerrero', d: 'Fuerte y resistente. Empieza con espada, escudo de vitalidad y Golpe Poderoso.', st: { fue: 3, vit: 3 }, w: 'Espada', sk: 'golpe' },
@@ -1257,7 +1429,7 @@ function importSave(t) {
   try { const j = decodeURIComponent(escape(atob(t.trim()))); const o = JSON.parse(j); if (!o || !o.P || typeof o.P.lvl !== 'number') return false; localStorage.setItem('cc_save', j); load(); return true; } catch (e) { return false; }
 }
 function newGame(cls = 'guerrero') {
-  P = newPlayer(); town = genTown(); town.crops = {}; visitors = []; W = town; P.x = 20; P.y = 9; P.fx = 20; P.fy = 9;
+  P = newPlayer(); town = genTown(); town.crops = {}; visitors = []; comps = []; W = town; P.x = 20; P.y = 9; P.fx = 20; P.fy = 9;
   const C = CLASSES[cls] || CLASSES.guerrero; P.cls = CLASSES[cls] ? cls : 'guerrero';
   for (const k in C.st) P.base[k] += C.st[k]; P.sk[C.sk] = 1; P.hp = maxHp(); P.mp = maxMp();
   P.eq.arma = genItem('arma', 1, 0, C.w); P.mats.semilla_trigo = 3; P.blocks.cultivo = 2;
@@ -1285,4 +1457,4 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 // API de pruebas
-window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };
+window.__game = { get P() { return P; }, get W() { return W; }, get ents() { return ents; }, get drops() { return drops; }, get town() { return town; }, get warns() { return warns; }, get projs() { return projs; }, get panel() { return panel; }, newGame, start, get comps() { return comps; }, buildComps, updateComps, toggleMount, moveTime, get cam() { return [camX, camY]; }, mmOff: () => drawMinimap.off, PETS, MOUNTS, ALLIES, allyMaxHp, hurtAlly, die, atk, farm, startFishing, updateFishing, get fishing() { return fishing; }, setWeather, get weather() { return weather; }, season, updateSeason, hasStation, recipeStations, enterField, get field() { return field; }, spawnFieldMob, checkExit, giveGift, chat, hearts, addFriend, talk, checkAch, ACH, FRIENDS, growCrops, spawnVisitor, talkVisitor, get visitors() { return visitors; }, music, musicTick, musicTrack, toggleMusic, pollPad, get padDir() { return padDir; }, exportSave, importSave, usePot, playerAttack, isBow, CLASSES, CROPS, onKey, enterFloor, enterTown, update, render, gainXp, spawnEnemy, killEnemy, damageEnemy, pickup, placeBlock, removeBlock, panelAct, openPanel, closePanel, save, load, comfort, upgradeHouse, astar, los, bossAI, questEvent, interact, EN, RECIPES, QUESTS, BLOCKS, T, gt, solidAt, setBuild(i) { buildSel = i; }, BLOCKIDS: () => Object.keys(BLOCKS) };

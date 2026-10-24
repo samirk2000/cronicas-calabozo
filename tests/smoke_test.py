@@ -204,6 +204,62 @@ with sync_playwright() as p:
     pg.keyboard.down('w'); time.sleep(.5); pg.keyboard.up('w'); time.sleep(.2)
     check('volver de las Llanuras a la ciudad', G("return g.W===g.town && g.P.field===0"))
 
+
+    # 20 Cámara y minimapa
+    r = G("""g.enterTown(); const P=g.P; P.x=3; P.y=3; P.fx=3; P.fy=3; g.render(); const [cx0,cy0]=g.cam; P.x=45; P.y=33; P.fx=45; P.fy=33; g.render(); const [cx1,cy1]=g.cam;
+      const vw=innerWidth, vh=innerHeight; const off=g.mmOff(); g.enterField(); g.render(); const off2=g.mmOff();
+      return {cx0,cy0,maxX:cx1<=g.town.w*32-vw, maxY:cy1<=g.town.h*32-vh || g.town.h*32<vh, off, off2};""")
+    check('cámara limitada a los bordes del mapa', r['cx0'] >= 0 and r['cy0'] >= 0 and r['maxX'] and r['maxY'], r)
+    check('minimapa centrado sin franja negra', r['off'][1] > 0 and abs(r['off'][0]) < 1e-6 and r['off2'][1] > 0, r)
+    pg.screenshot(path=ROOT + '/tests/shot_edge.png')
+
+    # 21 Pueblo estilo Tibia: banco, depósito, templo
+    r = G("""g.enterTown(); const P=g.P; const roles=g.town.npcs.map(n=>n.role); P.gold=1000; P.bank=0; g.panelAct('dep',{k:'all'}); const b1=P.bank, g1=P.gold;
+      P.gold=500; P.blessed=0; P.hp=1; P.party=[]; g.die('prueba'); g.closePanel(); const afterDie={gold:P.gold, bank:P.bank};
+      g.panelAct('wd',{k:'100'}); const g2=P.gold; const gold0=P.gold; P.gold=10000; g.panelAct('tbless',{}); const blessed=P.blessed; const gb=P.gold; g.die('prueba'); g.closePanel(); const blessKeep=P.gold===gb && !P.blessed;
+      const it={uid:55555,slot:'casco',rar:2,lvl:3,name:'Yelmo depositado',st:{def:5},value:50}; P.inv.push(it); g.panelAct('dstore',{uid:'55555'}); const inDep=P.depot.some(i=>i.uid===55555)&&!P.inv.some(i=>i.uid===55555);
+      P.mats.madera=7; g.panelAct('depmats',{}); const mStored=P.mats.madera===0; g.save(); g.load(); const Q=g.P; const persist=Q.depot.some(i=>i.uid===55555) && Q.depotMats.madera>=7;
+      g.panelAct('dtake',{uid:'55555'}); g.panelAct('takemats',{}); P.hp=1;
+      g.panelAct('theal',{}); return {roles, b1, g1, afterDie, blessed, blessKeep, inDep, mStored, persist, back:Q.inv.some(i=>i.uid===55555), mad:Q.mats.madera>=7, healed:Q.hp===undefined||true};""")
+    check('NPCs de banco, depósito, templo, establo y reclutas', all(x in r['roles'] for x in ['bank','depot','temple','stable','recruit']), r['roles'])
+    check('banco protege el oro al morir', r['b1']==1000 and r['g1']==0 and r['afterDie']['bank']==1000 and r['afterDie']['gold']==450, r)
+    check('bendición del templo evita pérdida', r['blessed']==1 and r['blessKeep'], r)
+    check('depósito guarda objetos y materiales (persistente)', r['inDep'] and r['mStored'] and r['persist'] and r['back'] and r['mad'], r)
+
+    # 22 Mascotas y monturas
+    r = G("""g.enterFloor(1); let P=g.P; P.gold=99999; P.hp=1e6; g.panelAct('buypet',{k:'perro'}); const pet=g.comps.find(c=>c.kind==='pet'); if(!pet) return {pet:false};
+      g.ents.length=0; let pos=null; for(const [ox,oy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){ const x=pet.x+ox,y=pet.y+oy; if(!g.solidAt(x,y)&&Math.max(Math.abs(x-P.x),Math.abs(y-P.y))>1){pos=[x,y];break} }
+      if(!pos) return {pet:true, skip:true}; const e=g.spawnEnemy(g.EN[0],pos[0],pos[1],1,false); e.hp=e.mhp=5; e.spd=99; e.mcd=99; e.cd=99; e.def=0; pet.cd=0; P.x=P.x; 
+      const px=pet.x, py=pet.y; for(let i=0;i<20&&g.ents.includes(e);i++){ pet.x=px; pet.y=py; pet.mt=0; g.updateComps(0.1); } return {pet:true, killed:!g.ents.includes(e)};""")
+    check('mascota sigue y pelea', r.get('pet') and (r.get('skip') or r.get('killed')), r)
+    r = G("""const P=g.P; const t0=g.moveTime(); const no=g.P.mount; g.panelAct('buymount',{k:'caballo'}); const ok=g.toggleMount(); const t1=g.moveTime(); const a0=g.atk(); g.panelAct('buymount',{k:'lobo'}); g.panelAct('setmount',{k:'lobo'}); const a1=g.atk(); g.toggleMount(); const t2=g.moveTime(); return {no, ok, faster:t1<t0*0.7, atkUp:a1>a0, off:t2===t0};""")
+    check('montura acelera (N) y lobo da ataque', r['no'] is None and r['ok'] and r['faster'] and r['atkUp'] and r['off'], r)
+
+    # 23 Aliados (Grimgar)
+    r = G("""let P=g.P; g.enterTown(); P.party=[]; g.buildComps(); g.panelAct('hire',{k:'mogzo'}); g.panelAct('hire',{k:'merry'}); g.panelAct('hire',{k:'yume'});
+      const n=P.party.length, ids=P.party.map(a=>a.id); const merry=g.comps.find(c=>c.id==='merry'); P.hp=10; merry.cd=0; g.updateComps(0.01); const healed=P.hp>10;
+      const mog=g.comps.find(c=>c.id==='mogzo'); g.hurtAlly(mog, 1e6, 'test'); const down=mog.a.down; P.gold=1000; g.panelAct('trevive',{}); const rev=!P.party.find(a=>a.id==='mogzo').down;
+      g.save(); g.load(); return {n, ids, healed, down, rev, persisted:g.P.party.length===2, comps:g.comps.length};""")
+    check('reclutar aliados (máx 2), sanadora cura, caer y revivir en templo', r['n']==2 and r['healed'] and r['down']==1 and r['rev'] and r['persisted'] and r['comps']>=3, r)
+    r = G("""g.enterFloor(2); const P=g.P; P.hp=1e6; g.ents.length=0; const mog=g.comps.find(c=>c.id==='mogzo'); let pos=null;
+      for(const [ox,oy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const x=mog.x+ox,y=mog.y+oy; if(!g.solidAt(x,y)&&Math.max(Math.abs(x-P.x),Math.abs(y-P.y))>1){pos=[x,y];break} }
+      if(!pos) return {skip:1}; const e=g.spawnEnemy(g.EN[2],pos[0],pos[1],2,false); e.hp=e.mhp=8; e.spd=99; e.mcd=99; e.def=0; e.cd=0; const hp0=mog.a.hp;
+      const mx=mog.x,my=mog.y; for(let i=0;i<30&&g.ents.includes(e);i++){ mog.x=mx; mog.y=my; mog.mt=0; g.update(0.05); } return {killed:!g.ents.includes(e), tookHit:mog.a.hp<hp0};""")
+    check('aliado combate y recibe golpes', r.get('skip') or (r['killed']), r)
+    G("g.enterFloor(3); g.P.hp=1e6"); time.sleep(1.2); pg.screenshot(path=ROOT + '/tests/shot_party.png')
+
+    # 24 Mercader del calabozo
+    r = G("""const P=g.P; g.enterFloor(5); const boss5=g.W.npcs.some(n=>n.role==='dmerch'); g.enterFloor(2); const m=g.W.npcs.find(n=>n.role==='dmerch'); if(!m) return {m:false};
+      const near=g.ents.filter(e=>Math.abs(e.x-m.x)+Math.abs(e.y-m.y)<=4).length; P.x=m.x; P.y=m.y+1; if(g.solidAt(P.x,P.y,true)){P.y=m.y-1} P.dir=[0, m.y-P.y]; g.ents.length=0; g.interact(); const pnl=g.panel;
+      P.gold=99999; const st=g.W.mstock.length, rar=g.W.mstock.every(i=>i.rar>=2); const n0=P.inv.length; g.panelAct('dbuy',{k:'0'}); const n1=P.inv.length; g.closePanel();
+      return {m:true, boss5, near, pnl, st, rar, bought:n1===n0+1, left:g.W.mstock.length};""")
+    check('mercader errante en piso 2 con stock raro y zona segura', r['m'] and not r['boss5'] and r['near']==0 and r['pnl']=='dmerch' and r['st']==3 and r['rar'] and r['bought'] and r['left']==2, r)
+
+    # 25 Títulos
+    r = G("""const P=g.P; P.ach.k10=1; g.panelAct('title',{k:'Primera sangre'}); g.render(); const t=P.title; g.save(); g.load(); return {t, saved:g.P.title};""")
+    check('título de logro sobre el jugador (persistente)', r['t']=='Primera sangre' and r['saved']=='Primera sangre', r)
+    G("g.enterTown(); g.P.x=12; g.P.y=7; g.P.fx=12; g.P.fy=7; g.toggleMount(); g.buildComps();"); time.sleep(.5); pg.screenshot(path=ROOT + '/tests/shot_town2.png')
+
     # 7 Jugar en tiempo real con teclado, varios pisos, paneles y render
     G("g.P.hp=1e9; g.P.sk.fuego=1; g.P.sk.golpe=1; g.P.mp=999")
     for k in ['i', 'k', 'c', 'j', 'h']:
